@@ -14,5 +14,23 @@
       "why": "Profit missed badly, but investors were looking ahead. Lower costs and a huge buyback meant future profits per share would rise.",
       "tag": "Guidance beats results",
       "source": "https://finance.yahoo.com/news/meta-earnings-stock-spikes-after-better-than-expected-revenue-buyback-announcement-211912404.html"
-    }
+    },
+    {
+        "id": 2,
+        "disguise": "A popular streaming service",
+        "when": "April 2024",
+        "mood": "Its crackdown on password sharing had added millions of new subscribers, and the stock had risen sharply over the past year. Investors expected another big quarter.",
+        "rows": [
+          { "label": "Revenue ($bn)", "expected": 9.28, "actual": 9.37 },
+          { "label": "EPS ($)", "expected": 4.52, "actual": 5.28 }
+        ],
+        "otherNews": "It forecast next-quarter revenue of $9.49bn, below the $9.54bn analysts expected, and said it would stop reporting subscriber numbers from 2025.",
+        "answer": { "direction": "down", "movePct": -9.1 },
+        "company": "Netflix",
+        "why": "The quarter was great, but investors pay for future growth. A weak forecast and hiding subscriber numbers suggested the fast growth was slowing.",
+        "tag": "Watch the forecast",
+        "source": "https://www.cnbc.com/2024/04/18/netflix-nflx-earnings-q1-2024.html"
+      }
+    
+
   ]
