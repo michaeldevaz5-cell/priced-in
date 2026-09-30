@@ -1,1 +1,44 @@
-<h1>Priced In</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Priced In</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Priced In</h1>
+
+    <section id="card">
+        <p id="when"></p>
+        <h2 id="disguise"></h2>
+        <p id="mood"></p>
+        <table id="rows"></table>
+        <p id="other-news"></p>
+        <h3>What did the stock do the next day?</h3>
+    </section>
+
+
+    <div id="dir-buttons">
+        <button id="btn-up">Up</button>
+        <button id="btn-down">Down</button>
+    </div>
+
+    <div id="size-buttons" hidden>
+        <button id="btn-small">Small (under 5%)</button>
+        <button id="btn-big">Big (5% or more)</button>
+    </div>
+
+    <section id="reveal" hidden>
+        <h2 id="company"></h2>
+        <p id="move"></p>
+        <p id="result"></p>
+        <p id="why"></p>
+        <p id="tag"></p>
+        <a id="source">Source</a>
+    </section>
+
+
+    <script src="game.js"></script>
+</body>
+</html>
