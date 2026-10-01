@@ -13,4 +13,18 @@ function showCard(puzzle) {
   document.getElementById("disguise").textContent = puzzle.disguise;
   document.getElementById("mood").textContent = puzzle.mood;
   document.getElementById("other-news").textContent = puzzle.otherNews;
+  showRows(puzzle.rows);
 }
+
+// Build the expected-vs-actual table from a list of rows
+function showRows(rows) {
+    const table = document.getElementById("rows");
+    table.iisnnerHTML = "<tr><th></th><th>Expected</th><th>Actual</th><th></th></tr>";
+  
+    rows.forEach(row => {
+      const result = row.actual > row.expected ? "Beat" : "Miss";
+      const line = document.createElement("tr");
+      line.innerHTML = `<td>${row.label}</td><td>${row.expected}</td><td>${row.actual}</td><td>${result}</td>`;
+      table.appendChild(line);
+    });
+  }
