@@ -4,40 +4,130 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Priced In</title>
+    <meta name="description" content="A game about how markets react to news. Read the results, then call it: up or down?">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Priced In</h1>
+    <div class="app">
 
-    <section id="card">
-        <p id="when"></p>
-        <h2 id="disguise"></h2>
-        <p id="mood"></p>
-        <table id="rows"></table>
-        <p id="other-news"></p>
-        <h3>What did the stock do the next day?</h3>
-    </section>
+        <!-- Top bar: logo, card counter, streak -->
+        <header class="topbar">
+            <div class="brand">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 16 L8 10 L12 13 L20 4"></path><path d="M15 4 H20 V9"></path></svg>
+                <span>Priced In</span>
+            </div>
+            <div class="topbar-meta">
+                <span id="progress"></span>
+                <span id="streak" class="streak"></span>
+            </div>
+        </header>
 
+        <main class="stage">
 
-    <div id="dir-buttons">
-        <button id="btn-up">Up</button>
-        <button id="btn-down">Down</button>
+            <!-- Screen 1: the card the player reads before guessing -->
+            <section id="card" class="screen">
+                <p id="when" class="kicker"></p>
+                <h1 id="disguise" class="headline"></h1>
+                <p id="mood" class="body-text"></p>
+
+                <div class="panel">
+                    <table id="rows" class="rows"></table>
+                </div>
+
+                <div class="clue">
+                    <p class="label gold">Also announced</p>
+                    <p id="other-news"></p>
+                </div>
+
+                <h2 class="question">What did the stock do the next day?</h2>
+            </section>
+
+            <!-- Screen 2: the reveal after the player has guessed -->
+            <section id="reveal" class="screen" hidden aria-live="polite">
+                <p id="reveal-when" class="kicker fade-up"></p>
+                <h1 id="company" class="headline fade-up d1"></h1>
+
+                <div class="panel move-panel">
+                    <div class="move-line">
+                        <span id="move" class="move-number"></span>
+                        <span class="muted">in one day</span>
+                    </div>
+                    <div id="chart" class="chart"></div>
+                    <p id="chart-note" class="note"></p>
+                </div>
+
+                <div class="verdicts fade-up d2">
+                    <div class="verdict">
+                        <span class="label">Direction</span>
+                        <span id="verdict-dir" class="verdict-text"></span>
+                    </div>
+                    <div class="verdict">
+                        <span class="label">Size</span>
+                        <span id="verdict-size" class="verdict-text"></span>
+                    </div>
+                </div>
+
+                <div class="why fade-up d3">
+                    <p class="label gold">Why</p>
+                    <p id="why" class="body-text"></p>
+                    <p id="tag" class="tag"></p>
+                    <a id="source" class="source" target="_blank" rel="noopener">Source</a>
+                </div>
+            </section>
+
+            <!-- Screen 3: end of the round -->
+            <section id="results" class="screen" hidden>
+                <p class="kicker fade-up">Round complete</p>
+                <h1 id="final-score" class="headline fade-up d1"></h1>
+                <p id="final-line" class="body-text fade-up d1"></p>
+                <div id="grid" class="grid fade-up d2"></div>
+                <p id="stats" class="note fade-up d3"></p>
+            </section>
+
+            <!-- Shown if puzzles.json can't be loaded -->
+            <section id="error" class="screen" hidden>
+                <h1 class="headline">Couldn't load the puzzles</h1>
+                <p class="body-text">If you opened index.html straight from your files, run <code>python3 -m http.server</code> in the project folder and open localhost:8000 instead.</p>
+            </section>
+        </main>
+
+        <!-- Bottom bar: whichever buttons fit the current step -->
+        <footer class="actions">
+            <div id="dir-buttons" class="btn-row">
+                <button id="btn-up" class="btn btn-up">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>
+                    Up
+                </button>
+                <button id="btn-down" class="btn btn-down">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M19 12l-7 7-7-7"></path></svg>
+                    Down
+                </button>
+            </div>
+
+            <div id="size-buttons" class="size-step" hidden>
+                <p class="hint">You called <strong id="picked"></strong>. How big was the move?</p>
+                <div class="btn-row">
+                    <button id="btn-small" class="btn btn-neutral">Small<span>under 5%</span></button>
+                    <button id="btn-big" class="btn btn-neutral">Big<span>5% or more</span></button>
+                </div>
+            </div>
+
+            <div id="next-step" class="btn-row" hidden>
+                <button id="btn-next" class="btn btn-gold">Next card</button>
+            </div>
+
+            <div id="end-step" class="btn-row" hidden>
+                <button id="btn-share" class="btn btn-gold">Share result</button>
+                <button id="btn-replay" class="btn btn-neutral btn-narrow">Play again</button>
+            </div>
+        </footer>
     </div>
 
-    <div id="size-buttons" hidden>
-        <button id="btn-small">Small (under 5%)</button>
-        <button id="btn-big">Big (5% or more)</button>
-    </div>
-
-    <section id="reveal" hidden>
-        <h2 id="company"></h2>
-        <p id="move"></p>
-        <p id="result"></p>
-        <p id="why"></p>
-        <p id="tag"></p>
-        <a id="source">Source</a>
-    </section>
-
+    <!-- Full-screen colour flash on the reveal -->
+    <div id="flash" class="flash" aria-hidden="true"></div>
 
     <script src="game.js"></script>
 </body>
