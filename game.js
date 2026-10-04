@@ -1,10 +1,14 @@
+// Remember the current card and the player's choice
+let currentPuzzle;
+let pickedDir;
+
 // Load the puzzles file, then show the first card
 fetch("puzzles.json")
   .then(response => response.json())
   .then(puzzles => {
-    const puzzle = puzzles[0];
-    console.log(puzzle);
-    showCard(puzzle);
+    currentPuzzle = puzzles[0];
+    console.log(currentPuzzle);
+    showCard(currentPuzzle);
   });
 
 // Put a puzzle's text into the page
@@ -35,4 +39,15 @@ function showRows(rows) {
     line.innerHTML = `<td>${row.label}</td><td>${row.expected}</td><td>${row.actual}</td><td>${result}</td>`;
     table.appendChild(line);
   });
+}
+
+// When Up or Down is clicked, remember it and move on to the size question
+document.getElementById("btn-up").addEventListener("click", () => pickDirection("up"));
+document.getElementById("btn-down").addEventListener("click", () => pickDirection("down"));
+
+function pickDirection(dir) {
+  pickedDir = dir;
+  console.log("Picked:", pickedDir);
+  document.getElementById("dir-buttons").hidden = true;
+  document.getElementById("size-buttons").hidden = false;
 }
