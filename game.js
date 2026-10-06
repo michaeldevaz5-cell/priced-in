@@ -205,11 +205,56 @@ function showCard() {
     $("mood").textContent = puzzle.mood;
     $("other-news").textContent = puzzle.otherNews;
     showRows(puzzle.rows);
+    showDots();
+    showHeadlineCheck(puzzle.rows);
+    $("tip").innerHTML = TIPS[cardIndex % TIPS.length];   // tips are our own fixed text, not card data
 
     showOnly("card");
     showButtons("dir-buttons");
-    replayAnimation($("card"), "enter");
+    restartAnimations($("card"));
     window.scrollTo(0, 0);
+}
+
+// Short "think like a trader" nudges, one per card
+const TIPS = [
+    "Prices already include what investors expected. Ask yourself: <strong>what here is a genuine surprise?</strong>",
+    "Last quarter matters less than the next one. <strong>Did the company change its forecast?</strong>",
+    "A stock that has already risen a lot needs a <strong>bigger beat</strong> just to hold its price.",
+    "Bad news can push a stock up if it was <strong>less bad than feared</strong>.",
+    "Watch for one big number that changes the story: a buyback, a forecast, a <strong>new contract</strong>."
+];
+
+// One dot per card: green or red for finished cards, gold for the current one
+function showDots() {
+    const dots = $("card-dots");
+    dots.innerHTML = "";
+    puzzles.forEach((_, i) => {
+        const dot = document.createElement("i");
+        if (i < results.length) dot.className = results[i].dirRight ? "done-hit" : "done-miss";
+        else if (i === cardIndex) dot.className = "now";
+        dots.appendChild(dot);
+    });
+}
+
+// "Headline check": how the results look on paper, worked out from the beat/miss rows
+function showHeadlineCheck(rows) {
+    const meter = $("meter");
+    meter.innerHTML = "";
+    let beats = 0, misses = 0;
+    rows.forEach((row, i) => {
+        const seg = document.createElement("span");
+        if (row.actual > row.expected) { seg.className = "m-beat"; beats++; }
+        else if (row.actual < row.expected) { seg.className = "m-miss"; misses++; }
+        else seg.className = "m-inline";
+        seg.style.animationDelay = (0.3 + i * 0.12) + "s";
+        meter.appendChild(seg);
+    });
+
+    let verdict;
+    if (misses === 0 && beats > 0) verdict = "<strong>Looks great on paper.</strong> Every number beat expectations.";
+    else if (beats === 0 && misses > 0) verdict = "<strong>Looks bad on paper.</strong> Every number missed expectations.";
+    else verdict = `<strong>Mixed.</strong> ${beats} beat${beats === 1 ? "" : "s"}, ${misses} miss${misses === 1 ? "" : "es"}.`;
+    $("headline-verdict").innerHTML = verdict + " But is that what the market cares about?";
 }
 
 // Build the expected-vs-actual table
@@ -243,6 +288,14 @@ function showRows(rows) {
         const chip = document.createElement("span");
         chip.className = "chip " + chipClass;
         chip.textContent = result;
+        // How big the surprise was: actual vs expected, in %
+        if (row.expected !== 0 && row.actual !== row.expected) {
+            const pct = (row.actual - row.expected) / Math.abs(row.expected) * 100;
+            const pctSpan = document.createElement("span");
+            pctSpan.className = "pct";
+            pctSpan.textContent = (pct > 0 ? "+" : "−") + Math.abs(pct).toFixed(1) + "%";
+            chip.appendChild(pctSpan);
+        }
         chipCell.appendChild(chip);
         line.appendChild(chipCell);
 

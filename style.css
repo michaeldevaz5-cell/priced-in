@@ -296,6 +296,140 @@ html, body {
 
 .rules[hidden] { display: none; }
 
+/* ---------- Game background: faint chart paper with a soft glow ---------- */
+body {
+    background-image:
+        linear-gradient(rgba(232, 176, 74, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232, 176, 74, 0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+
+.app { position: relative; }
+
+.app::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 900px;
+    max-width: 100%;
+    height: 520px;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at 50% 0%, rgba(232, 176, 74, 0.09), transparent 70%);
+    pointer-events: none;
+}
+
+.app > header, .app > main { position: relative; }
+
+/* ---------- Card extras ---------- */
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.redacted {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+}
+
+.redacted .bars {
+    color: #3A4350;
+    letter-spacing: -0.05em;
+    animation: flicker 3s steps(1) infinite;
+}
+
+@keyframes flicker {
+    0%, 92%, 100% { color: #3A4350; }
+    94% { color: var(--gold); }
+    96% { color: #3A4350; }
+}
+
+.dots { display: flex; gap: 6px; }
+
+.dots i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+}
+
+.dots i.done-hit { background: var(--up); }
+.dots i.done-miss { background: var(--down); }
+.dots i.now { background: var(--gold); box-shadow: 0 0 0 3px rgba(232, 176, 74, 0.2); }
+
+.headline-check { display: flex; flex-direction: column; gap: 10px; }
+
+.meter {
+    display: flex;
+    gap: 4px;
+    height: 10px;
+}
+
+.meter span {
+    flex: 1;
+    border-radius: 3px;
+    background: var(--border);
+    transform-origin: left center;
+    animation: grow 0.5s ease-out both;
+}
+
+.meter span.m-beat { background: var(--up); }
+.meter span.m-miss { background: var(--down); }
+.meter span.m-inline { background: var(--muted); }
+
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.headline-verdict {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-soft);
+}
+
+.headline-verdict strong { color: var(--text); }
+
+.tip {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(232, 176, 74, 0.06);
+    border: 1px solid rgba(232, 176, 74, 0.22);
+    color: var(--gold);
+}
+
+.tip svg { flex-shrink: 0; margin-top: 1px; }
+
+.tip p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-soft);
+}
+
+.tip strong { color: var(--text); }
+
+.chip .pct { font-weight: 400; opacity: 0.85; margin-left: 4px; }
+
+/* quick staggered entrance for the card */
+.s0 { animation-delay: 0s; }
+.s1 { animation-delay: 0.08s; }
+.s2 { animation-delay: 0.16s; }
+.s3 { animation-delay: 0.24s; }
+.s4 { animation-delay: 0.32s; }
+
 /* ---------- Bet result on the reveal ---------- */
 .pnl-panel { display: flex; flex-direction: column; gap: 4px; }
 
@@ -642,6 +776,8 @@ code {
     .rows td { font-size: 16px; padding-top: 12px; }
     .rows .num { font-size: 17px; }
     .chip { font-size: 12px; padding: 5px 10px; }
+    .tip p, .headline-verdict { font-size: 16px; }
+    .meter { height: 12px; }
 
     /* The reveal's right-hand column lines up with the chart, not the headline */
     #reveal .col:last-child { padding-top: 92px; }
@@ -660,6 +796,7 @@ code {
     .actions {
         position: static;
         border-top: none;
+        background: transparent;
         padding: 8px 40px 56px;
     }
     .actions > div { max-width: 560px; margin: 0 auto; }
@@ -674,5 +811,6 @@ code {
     .enter, .shake { animation: none; }
     .flash { display: none; }
     .tape-track { animation: none; }
+    .meter span, .redacted .bars { animation: none; }
     .home-kicker, .home-title, .home-sub, .home-chips, .btn-start, .howto { animation: none; }
 }

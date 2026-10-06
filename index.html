@@ -71,22 +71,42 @@
             <!-- Screen 1: the card the player reads before guessing -->
             <section id="card" class="screen two-col">
                 <div class="col">
-                    <p id="when" class="kicker"></p>
-                    <h1 id="disguise" class="headline"></h1>
-                    <p id="mood" class="body-text"></p>
+                    <div class="card-top fade-up s0">
+                        <span class="redacted" title="The company is hidden until the reveal">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+                            Ticker <span class="bars" aria-label="hidden">████</span>
+                        </span>
+                        <span id="card-dots" class="dots" aria-hidden="true"></span>
+                    </div>
+                    <p id="when" class="kicker fade-up s0"></p>
+                    <h1 id="disguise" class="headline fade-up s1"></h1>
+                    <p id="mood" class="body-text fade-up s2"></p>
+
+                    <!-- How the results look on paper, worked out from the numbers -->
+                    <div class="panel headline-check fade-up s3">
+                        <p class="label">Headline check</p>
+                        <div id="meter" class="meter"></div>
+                        <p id="headline-verdict" class="headline-verdict"></p>
+                    </div>
+
+                    <div class="tip fade-up s4">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"></path></svg>
+                        <p id="tip"></p>
+                    </div>
                 </div>
 
                 <div class="col">
-                    <div class="panel">
+                    <div class="panel fade-up s1">
                         <table id="rows" class="rows"></table>
                     </div>
 
-                    <div class="clue">
+                    <div class="clue fade-up s2">
                         <p class="label gold">Also announced</p>
                         <p id="other-news"></p>
                     </div>
 
-                    <h2 class="question">What did the stock do the next day?</h2>                </div>
+                    <h2 class="question fade-up s3">What did the stock do the next day?</h2>
+                </div>
             </section>
 
             <!-- Screen 2: the reveal after the player has guessed -->
