@@ -38,13 +38,150 @@ fetch("puzzles.json")
     .then(data => {
         puzzles = data;
         showStreak();
-        startRound();
+        showHome();
     })
     .catch(error => {
         console.error(error);
+        $("home").hidden = true;
+        $("app").hidden = false;
         showOnly("error");
         $("dir-buttons").hidden = true;
     });
+
+
+// ---------- Home screen ----------
+$("btn-start").addEventListener("click", () => {
+    stopHomeChart();
+    $("home").hidden = true;
+    $("app").hidden = false;
+    startRound();
+});
+
+$("btn-home").addEventListener("click", showHome);
+
+function showHome() {
+    $("app").hidden = true;
+    $("home").hidden = false;
+    $("home-cards").textContent = `${puzzles.length} cards`;
+
+    const stats = loadStats();
+    $("home-stats").textContent = stats.played > 0
+        ? `Rounds played ${stats.played} · Best ${money(stats.bestValue)} · Streak ${stats.streak}`
+        : "";
+
+    buildTape();
+    startHomeChart();
+    window.scrollTo(0, 0);
+}
+
+// The ticker tape: market ideas instead of real stocks, so nothing here is made-up data
+function buildTape() {
+    const items = [
+        ["EXPECTATIONS", 2.4], ["SURPRISE", 7.9], ["HYPE", -3.1], ["GUIDANCE", 4.6],
+        ["BUYBACK", 1.8], ["PRICED IN", -0.6], ["CONSENSUS", 0.9], ["SELL THE NEWS", -5.2],
+        ["LOW BAR", 3.3], ["WHISPER NUMBER", -1.7], ["VALUATION", -2.8], ["BEAT", 1.2], ["MISS", -4.4]
+    ];
+    const track = $("tape-track");
+    track.innerHTML = "";
+    // Two copies side by side so the loop is seamless
+    for (let copy = 0; copy < 2; copy++) {
+        items.forEach(([name, change]) => {
+            const span = document.createElement("span");
+            const up = change >= 0;
+            span.textContent = `${name} `;
+            const delta = document.createElement("span");
+            delta.className = up ? "t-up" : "t-down";
+            delta.textContent = `${up ? "▲" : "▼"} ${Math.abs(change).toFixed(1)}%`;
+            span.appendChild(delta);
+            track.appendChild(span);
+        });
+    }
+}
+
+// Background price line that keeps drawing itself across the home screen.
+// It's a random walk, purely decorative.
+let homeChartFrame = null;
+
+function startHomeChart() {
+    const canvas = $("home-chart");
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const step = 6;                 // pixels between points
+    let points = [];
+    let offset = 0;
+    let last = performance.now();
+
+    function resize() {
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const count = Math.ceil(canvas.clientWidth / step) + 3;
+        const mid = canvas.clientHeight * 0.7;
+        if (points.length === 0) {
+            let v = mid;
+            for (let i = 0; i < count; i++) { v = nextValue(v); points.push(v); }
+        }
+        while (points.length < count) points.push(nextValue(points[points.length - 1]));
+    }
+
+    // Each new price drifts slightly up, with noise, and is pulled back if it wanders off-screen
+    function nextValue(v) {
+        const h = canvas.clientHeight;
+        const pull = (h * 0.62 - v) * 0.02;
+        return Math.min(h * 0.92, Math.max(h * 0.3, v - 0.35 + pull + (Math.random() - 0.5) * 14));
+    }
+
+    function draw(now) {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        const dt = Math.min(64, now - last);
+        last = now;
+        offset += dt * 0.03;                       // scroll speed
+        while (offset >= step) {
+            offset -= step;
+            points.shift();
+            points.push(nextValue(points[points.length - 1]));
+        }
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.beginPath();
+        points.forEach((v, i) => {
+            const x = i * step - offset;
+            if (i === 0) ctx.moveTo(x, v); else ctx.lineTo(x, v);
+        });
+
+        // Glowing gold line
+        ctx.strokeStyle = "rgba(232, 176, 74, 0.55)";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "rgba(232, 176, 74, 0.6)";
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Faint fill underneath
+        const lastX = (points.length - 1) * step - offset;
+        ctx.lineTo(lastX, h);
+        ctx.lineTo(-offset, h);
+        ctx.closePath();
+        const fill = ctx.createLinearGradient(0, h * 0.3, 0, h);
+        fill.addColorStop(0, "rgba(232, 176, 74, 0.10)");
+        fill.addColorStop(1, "rgba(232, 176, 74, 0)");
+        ctx.fillStyle = fill;
+        ctx.fill();
+
+        if (!reduceMotion) homeChartFrame = requestAnimationFrame(draw);
+    }
+
+    stopHomeChart();
+    resize();
+    window.onresize = resize;
+    homeChartFrame = requestAnimationFrame(draw);
+}
+
+function stopHomeChart() {
+    if (homeChartFrame) cancelAnimationFrame(homeChartFrame);
+    homeChartFrame = null;
+    window.onresize = null;
+}
 
 
 // ---------- 2. Round flow ----------
@@ -68,9 +205,6 @@ function showCard() {
     $("mood").textContent = puzzle.mood;
     $("other-news").textContent = puzzle.otherNews;
     showRows(puzzle.rows);
-
-    // The rules note only shows on the first card
-    document.querySelector(".rules").hidden = cardIndex !== 0;
 
     showOnly("card");
     showButtons("dir-buttons");
@@ -262,8 +396,7 @@ function drawChart(puzzle, isUp) {
     const x = (i) => PAD + (i / (prices.length - 1)) * (W - PAD * 2);
     const y = (p) => H - PAD - ((p - min) / range) * (H - PAD * 2);
 
-    const points = prices.map((p, i) => `${x(i).toFixed(1)} ${y(p).toFixed(1)}`);
-    const linePath = "M" + points.join(" L");
+    const linePath = smoothPath(prices.map((p, i) => [x(i), y(p)]));
     const areaPath = linePath + ` L${x(prices.length - 1).toFixed(1)} ${H} L${x(0).toFixed(1)} ${H} Z`;
     const markerX = x(prices.length - 2).toFixed(1);   // the last close before the results
     const endX = x(prices.length - 1).toFixed(1);
@@ -279,6 +412,45 @@ function drawChart(puzzle, isUp) {
             <circle class="dot-pop" cx="${endX}" cy="${endY}" r="6" fill="${colour}"></circle>
         </svg>`;
     $("chart-note").textContent = note;
+}
+
+// Turn a list of points into a smooth curve that still passes through every point.
+// "Monotone" smoothing: the curve never bulges above a peak or below a dip,
+// so it doesn't invent prices that weren't there.
+function smoothPath(pts) {
+    const n = pts.length;
+    const f = (v) => v.toFixed(1);
+    if (n < 2) return "";
+    if (n === 2) return `M${f(pts[0][0])} ${f(pts[0][1])} L${f(pts[1][0])} ${f(pts[1][1])}`;
+
+    const dx = [], slope = [], tan = [];
+    for (let i = 0; i < n - 1; i++) {
+        dx[i] = pts[i + 1][0] - pts[i][0];
+        slope[i] = (pts[i + 1][1] - pts[i][1]) / dx[i];
+    }
+    tan[0] = slope[0];
+    tan[n - 1] = slope[n - 2];
+    for (let i = 1; i < n - 1; i++) {
+        tan[i] = slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2;
+    }
+    for (let i = 0; i < n - 1; i++) {
+        if (slope[i] === 0) { tan[i] = 0; tan[i + 1] = 0; continue; }
+        const a = tan[i] / slope[i], b = tan[i + 1] / slope[i];
+        const s = a * a + b * b;
+        if (s > 9) {
+            const k = 3 / Math.sqrt(s);
+            tan[i] = k * a * slope[i];
+            tan[i + 1] = k * b * slope[i];
+        }
+    }
+
+    let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+    for (let i = 0; i < n - 1; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+        const h = dx[i] / 3;
+        d += ` C${f(x0 + h)} ${f(y0 + tan[i] * h)} ${f(x1 - h)} ${f(y1 - tan[i + 1] * h)} ${f(x1)} ${f(y1)}`;
+    }
+    return d;
 }
 
 // Green or red flash across the whole screen
