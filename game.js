@@ -51,9 +51,9 @@ fetch("puzzles.json")
 
 // ---------- Home screen ----------
 $("btn-start").addEventListener("click", () => {
-    stopHomeChart();
     $("home").hidden = true;
     $("app").hidden = false;
+    document.body.classList.add("in-game");   // dims the background line
     startRound();
 });
 
@@ -62,6 +62,7 @@ $("btn-home").addEventListener("click", showHome);
 function showHome() {
     $("app").hidden = true;
     $("home").hidden = false;
+    document.body.classList.remove("in-game");
     $("home-cards").textContent = `${puzzles.length} cards`;
 
     const stats = loadStats();
@@ -70,7 +71,7 @@ function showHome() {
         : "";
 
     buildTape();
-    startHomeChart();
+    if (!homeChartFrame) startHomeChart();
     window.scrollTo(0, 0);
 }
 
@@ -103,7 +104,7 @@ function buildTape() {
 let homeChartFrame = null;
 
 function startHomeChart() {
-    const canvas = $("home-chart");
+    const canvas = $("bg-chart");
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const step = 6;                 // pixels between points
@@ -190,7 +191,27 @@ function startRound() {
     results = [];
     portfolio = START_VALUE;
     $("portfolio").textContent = money(portfolio);
+    showReturn();
     showCard();
+}
+
+// The "Return" box in the HUD: how far the portfolio is up or down
+function showReturn() {
+    const ret = roundReturn();
+    $("return").textContent = (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
+    $("return").className = "hud-value " + (ret > 0 ? "is-up" : ret < 0 ? "is-down" : "");
+}
+
+// The row of squares in the HUD: gold = this card, green/red = finished cards
+function showSquares() {
+    const box = $("squares");
+    box.innerHTML = "";
+    puzzles.forEach((_, i) => {
+        const sq = document.createElement("i");
+        if (i < results.length) sq.className = results[i].pnl >= 0 ? "hit" : "miss";
+        else if (i === cardIndex) sq.className = "now";
+        box.appendChild(sq);
+    });
 }
 
 // Show the current card and the Up/Down buttons
@@ -205,56 +226,12 @@ function showCard() {
     $("mood").textContent = puzzle.mood;
     $("other-news").textContent = puzzle.otherNews;
     showRows(puzzle.rows);
-    showDots();
-    showHeadlineCheck(puzzle.rows);
-    $("tip").innerHTML = TIPS[cardIndex % TIPS.length];   // tips are our own fixed text, not card data
+    showSquares();
 
     showOnly("card");
     showButtons("dir-buttons");
-    restartAnimations($("card"));
+    replayAnimation($("card"), "enter");
     window.scrollTo(0, 0);
-}
-
-// Short "think like a trader" nudges, one per card
-const TIPS = [
-    "Prices already include what investors expected. Ask yourself: <strong>what here is a genuine surprise?</strong>",
-    "Last quarter matters less than the next one. <strong>Did the company change its forecast?</strong>",
-    "A stock that has already risen a lot needs a <strong>bigger beat</strong> just to hold its price.",
-    "Bad news can push a stock up if it was <strong>less bad than feared</strong>.",
-    "Watch for one big number that changes the story: a buyback, a forecast, a <strong>new contract</strong>."
-];
-
-// One dot per card: green or red for finished cards, gold for the current one
-function showDots() {
-    const dots = $("card-dots");
-    dots.innerHTML = "";
-    puzzles.forEach((_, i) => {
-        const dot = document.createElement("i");
-        if (i < results.length) dot.className = results[i].dirRight ? "done-hit" : "done-miss";
-        else if (i === cardIndex) dot.className = "now";
-        dots.appendChild(dot);
-    });
-}
-
-// "Headline check": how the results look on paper, worked out from the beat/miss rows
-function showHeadlineCheck(rows) {
-    const meter = $("meter");
-    meter.innerHTML = "";
-    let beats = 0, misses = 0;
-    rows.forEach((row, i) => {
-        const seg = document.createElement("span");
-        if (row.actual > row.expected) { seg.className = "m-beat"; beats++; }
-        else if (row.actual < row.expected) { seg.className = "m-miss"; misses++; }
-        else seg.className = "m-inline";
-        seg.style.animationDelay = (0.3 + i * 0.12) + "s";
-        meter.appendChild(seg);
-    });
-
-    let verdict;
-    if (misses === 0 && beats > 0) verdict = "<strong>Looks great on paper.</strong> Every number beat expectations.";
-    else if (beats === 0 && misses > 0) verdict = "<strong>Looks bad on paper.</strong> Every number missed expectations.";
-    else verdict = `<strong>Mixed.</strong> ${beats} beat${beats === 1 ? "" : "s"}, ${misses} miss${misses === 1 ? "" : "es"}.`;
-    $("headline-verdict").innerHTML = verdict + " But is that what the market cares about?";
 }
 
 // Build the expected-vs-actual table
@@ -378,14 +355,15 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before)
     setVerdict("verdict-size", actualSize === "big" ? "Big" : "Small", sizeRight);
 
     // The bet result: green if you made money, red if you lost
-    $("pnl").className = "pnl-number " + (pnl >= 0 ? "is-up" : "is-down");
+    $("pnl").className = "stat-value " + (pnl >= 0 ? "is-up" : "is-down");
     let outcome;
     if (dirRight && sizeRight) outcome = "Both calls right: you win your bet.";
     else if (dirRight) outcome = "Right direction, wrong size: you win half.";
     else outcome = "Wrong direction: you lose your bet.";
     $("pnl-detail").textContent = `Bet ${money(stake)}. ${outcome}`;
 
-    drawChart(puzzle, isUp);
+    showSquares();
+    showReturn();
 
     // Numbers tick: the % move, then your profit/loss, then the portfolio in the top bar
     const decimals = Number.isInteger(Math.abs(move)) ? 0 : 1;
@@ -395,6 +373,7 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before)
     animateNumber($("portfolio"), before, portfolio, v => money(v), 1500);
 
     showOnly("reveal");
+    drawChart(puzzle, isUp);           // drawn after the panel is visible, so it can measure its width
     restartAnimations($("reveal"));
     flash(dirRight);
     if (!dirRight) replayAnimation($("verdict-dir").parentElement, "shake");
@@ -406,8 +385,8 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before)
 }
 
 function setVerdict(id, answerText, right) {
-    $(id).textContent = answerText + (right ? " · you got it" : " · you missed");
-    $(id).className = "verdict-text " + (right ? "is-up" : "is-down");
+    $(id).textContent = answerText + (right ? " ✓" : " ✗");
+    $(id).className = "stat-value " + (right ? "is-up" : "is-down");
 }
 
 // Make a number count from one value to another, fast at first then slowing down
@@ -431,7 +410,10 @@ function animateNumber(el, from, to, format, delay) {
 // being the day after the results), they're used. Otherwise the line just
 // goes from the previous close to the next-day close.
 function drawChart(puzzle, isUp) {
-    const W = 340, H = 150, PAD = 10;
+    // Draw at the panel's real width so the chart stays a sensible height on big screens
+    const W = Math.max(260, Math.round($("chart").clientWidth || 340));
+    const H = W > 500 ? 170 : 140;
+    const PAD = 10;
     const colour = isUp ? "var(--up)" : "var(--down)";
 
     let prices = puzzle.prices;
@@ -534,7 +516,8 @@ function showResults() {
     const retText = (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
 
     $("progress").textContent = "Done";
-    $("final-score").className = "headline fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
+    $("final-score").className = "headline big fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
+    showSquares();
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
     $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret)}`;
 
@@ -620,10 +603,8 @@ function saveStats() {
     showStreak();
 }
 
-function showStreak() {
-    const stats = loadStats();
-    $("streak").textContent = stats.streak > 1 ? `Streak ${stats.streak}` : "";
-}
+// The streak now shows on the home screen (in showHome), so there's nothing to update here
+function showStreak() {}
 
 
 // ---------- Helpers ----------
