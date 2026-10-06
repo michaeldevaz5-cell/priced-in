@@ -6,20 +6,30 @@
 // =============================================================
 
 // ---------- Settings ----------
-const BIG_MOVE = 5;          // a move of 5% or more counts as "big"
+const BIG_MOVE = 5;              // a move of 5% or more counts as "big"
+const START_VALUE = 10000;       // every round starts with a $10,000 portfolio
+const STAKES = { low: 0.10, mid: 0.25, high: 0.50 };   // share of the portfolio you bet
+const HALF_WIN = 0.5;            // right direction, wrong size: win half your bet
 const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
 
 // ---------- Game state (the game's "memory") ----------
 let puzzles = [];            // every card from puzzles.json
 let cardIndex = 0;           // which card we're on (0 = first)
 let pickedDir = null;        // "up" or "down"
-let results = [];            // one entry per finished card: { dirRight, sizeRight }
+let pickedSize = null;       // "small" or "big"
+let portfolio = START_VALUE; // current portfolio value in dollars
+let results = [];            // one entry per finished card
 
 // Shortcut: find an element by its id
 const $ = (id) => document.getElementById(id);
 
 // Does the player's system ask for less motion?
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// $12345 -> "$12,345"
+const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
+// +1234 -> "+$1,234", -1234 -> "−$1,234"
+const signedMoney = (n) => (n >= 0 ? "+" : "−") + money(Math.abs(n));
 
 
 // ---------- 1. Load the cards ----------
@@ -41,6 +51,8 @@ fetch("puzzles.json")
 function startRound() {
     cardIndex = 0;
     results = [];
+    portfolio = START_VALUE;
+    $("portfolio").textContent = money(portfolio);
     showCard();
 }
 
@@ -48,6 +60,7 @@ function startRound() {
 function showCard() {
     const puzzle = puzzles[cardIndex];
     pickedDir = null;
+    pickedSize = null;
 
     $("progress").textContent = `Card ${cardIndex + 1} of ${puzzles.length}`;
     $("when").textContent = puzzle.when;
@@ -55,6 +68,9 @@ function showCard() {
     $("mood").textContent = puzzle.mood;
     $("other-news").textContent = puzzle.otherNews;
     showRows(puzzle.rows);
+
+    // The rules note only shows on the first card
+    document.querySelector(".rules").hidden = cardIndex !== 0;
 
     showOnly("card");
     showButtons("dir-buttons");
@@ -109,11 +125,14 @@ function cell(tag, text, className) {
 }
 
 
-// ---------- 3. The player's two calls ----------
+// ---------- 3. The player's three choices: direction, size, bet ----------
 $("btn-up").addEventListener("click", () => pickDirection("up"));
 $("btn-down").addEventListener("click", () => pickDirection("down"));
-$("btn-small").addEventListener("click", () => pickSize("small"));
-$("btn-big").addEventListener("click", () => pickSize("big"));
+$("btn-small").addEventListener("click", () => pickSizeChoice("small"));
+$("btn-big").addEventListener("click", () => pickSizeChoice("big"));
+$("btn-low").addEventListener("click", () => placeBet("low"));
+$("btn-mid").addEventListener("click", () => placeBet("mid"));
+$("btn-high").addEventListener("click", () => placeBet("high"));
 
 function pickDirection(dir) {
     pickedDir = dir;
@@ -122,20 +141,42 @@ function pickDirection(dir) {
     showButtons("size-buttons");
 }
 
-function pickSize(size) {
+function pickSizeChoice(size) {
+    pickedSize = size;
+    $("picked-2").textContent = (pickedDir === "up" ? "UP" : "DOWN") + " · " + size.toUpperCase();
+    $("picked-2").className = pickedDir === "up" ? "is-up" : "is-down";
+
+    // Show how many dollars each bet level is right now
+    $("amt-low").textContent = `${STAKES.low * 100}% · ${money(portfolio * STAKES.low)}`;
+    $("amt-mid").textContent = `${STAKES.mid * 100}% · ${money(portfolio * STAKES.mid)}`;
+    $("amt-high").textContent = `${STAKES.high * 100}% · ${money(portfolio * STAKES.high)}`;
+    showButtons("stake-buttons");
+}
+
+function placeBet(level) {
     const puzzle = puzzles[cardIndex];
     const move = puzzle.answer.movePct;
     const actualSize = Math.abs(move) >= BIG_MOVE ? "big" : "small";
     const dirRight = pickedDir === puzzle.answer.direction;
-    const sizeRight = size === actualSize;
+    const sizeRight = pickedSize === actualSize;
 
-    results.push({ dirRight, sizeRight, company: puzzle.company });
-    showReveal(puzzle, dirRight, sizeRight, actualSize);
+    // Work out the profit or loss on the bet
+    const stake = Math.round(portfolio * STAKES[level]);
+    let pnl;
+    if (dirRight && sizeRight) pnl = stake;                        // both right: win the bet
+    else if (dirRight) pnl = Math.round(stake * HALF_WIN);          // right way, wrong size: win half
+    else pnl = -stake;                                              // wrong way: lose the bet
+
+    const before = portfolio;
+    portfolio += pnl;
+
+    results.push({ dirRight, sizeRight, company: puzzle.company, pnl, stake, level });
+    showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before);
 }
 
 
 // ---------- 4. The reveal ----------
-function showReveal(puzzle, dirRight, sizeRight, actualSize) {
+function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before) {
     const move = puzzle.answer.movePct;
     const isUp = puzzle.answer.direction === "up";
 
@@ -149,8 +190,22 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize) {
     setVerdict("verdict-dir", isUp ? "Up" : "Down", dirRight);
     setVerdict("verdict-size", actualSize === "big" ? "Big" : "Small", sizeRight);
 
+    // The bet result: green if you made money, red if you lost
+    $("pnl").className = "pnl-number " + (pnl >= 0 ? "is-up" : "is-down");
+    let outcome;
+    if (dirRight && sizeRight) outcome = "Both calls right: you win your bet.";
+    else if (dirRight) outcome = "Right direction, wrong size: you win half.";
+    else outcome = "Wrong direction: you lose your bet.";
+    $("pnl-detail").textContent = `Bet ${money(stake)}. ${outcome}`;
+
     drawChart(puzzle, isUp);
-    countUp(move);
+
+    // Numbers tick: the % move, then your profit/loss, then the portfolio in the top bar
+    const decimals = Number.isInteger(Math.abs(move)) ? 0 : 1;
+    const moveSign = move >= 0 ? "+" : "−";
+    animateNumber($("move"), 0, Math.abs(move), v => moveSign + v.toFixed(decimals) + "%", 250);
+    animateNumber($("pnl"), 0, pnl, v => signedMoney(v), 1500);
+    animateNumber($("portfolio"), before, portfolio, v => money(v), 1500);
 
     showOnly("reveal");
     restartAnimations($("reveal"));
@@ -168,24 +223,18 @@ function setVerdict(id, answerText, right) {
     $(id).className = "verdict-text " + (right ? "is-up" : "is-down");
 }
 
-// The big number ticks up from 0 to the real move
-function countUp(move) {
-    const target = Math.abs(move);
-    const sign = move >= 0 ? "+" : "−";
-    const decimals = Number.isInteger(target) ? 0 : 1;
-    const show = (value) => { $("move").textContent = sign + value.toFixed(decimals) + "%"; };
+// Make a number count from one value to another, fast at first then slowing down
+function animateNumber(el, from, to, format, delay) {
+    if (reduceMotion) { el.textContent = format(to); return; }
 
-    if (reduceMotion) { show(target); return; }
-
-    const delay = 250;
     const duration = 1100;
     const start = performance.now() + delay;
-    show(0);
+    el.textContent = format(from);
 
     function tick(now) {
         const progress = Math.min(1, Math.max(0, (now - start) / duration));
-        const eased = 1 - Math.pow(1 - progress, 3);   // fast at first, slows at the end
-        show(target * eased);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = format(from + (to - from) * eased);
         if (progress < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
@@ -251,13 +300,18 @@ $("btn-next").addEventListener("click", () => {
     }
 });
 
+function roundReturn() {
+    return (portfolio - START_VALUE) / START_VALUE * 100;
+}
+
 function showResults() {
-    const score = results.reduce((total, r) => total + (r.dirRight ? 1 : 0) + (r.sizeRight ? 1 : 0), 0);
-    const maxScore = results.length * 2;
+    const ret = roundReturn();
+    const retText = (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
 
     $("progress").textContent = "Done";
-    $("final-score").textContent = `${score} / ${maxScore}`;
-    $("final-line").textContent = scoreLine(score / maxScore);
+    $("final-score").className = "headline fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
+    animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
+    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret)}`;
 
     const grid = $("grid");
     grid.innerHTML = "";
@@ -273,10 +327,14 @@ function showResults() {
         name.className = "grid-name";
         name.textContent = r.company;
         row.appendChild(name);
+        const pnl = document.createElement("span");
+        pnl.className = "grid-pnl " + (r.pnl >= 0 ? "is-up" : "is-down");
+        pnl.textContent = signedMoney(r.pnl);
+        row.appendChild(pnl);
         grid.appendChild(row);
     });
 
-    saveStats(score, maxScore);
+    saveStats();
     showOnly("results");
     restartAnimations($("results"));
     $("btn-share").textContent = "Share result";
@@ -284,10 +342,10 @@ function showResults() {
     window.scrollTo(0, 0);
 }
 
-function scoreLine(fraction) {
-    if (fraction === 1) return "Perfect. You read the expectations, not the headlines.";
-    if (fraction >= 0.7) return "Strong. You're starting to think like the market.";
-    if (fraction >= 0.4) return "Not bad. The market fooled you a few times.";
+function scoreLine(ret) {
+    if (ret >= 50) return "Outstanding. You read the expectations, not the headlines.";
+    if (ret >= 15) return "Strong. You're starting to think like the market.";
+    if (ret >= 0) return "You stayed in the green. The market fooled you a few times.";
     return "The market got you. That's the point: good news isn't always good for the price.";
 }
 
@@ -295,9 +353,10 @@ $("btn-replay").addEventListener("click", startRound);
 
 // Copy a spoiler-free result, Wordle-style
 $("btn-share").addEventListener("click", () => {
-    const score = results.reduce((t, r) => t + (r.dirRight ? 1 : 0) + (r.sizeRight ? 1 : 0), 0);
+    const ret = roundReturn();
+    const retText = (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
     const squares = results.map(r => (r.dirRight ? "🟩" : "⬜") + (r.sizeRight ? "🟩" : "⬜")).join(" ");
-    const text = `Priced In ${score}/${results.length * 2}\n${squares}\n${SITE_URL}`;
+    const text = `Priced In: ${money(portfolio)} (${retText})\n${squares}\n${SITE_URL}`;
 
     if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
         navigator.share({ text }).catch(() => {});
@@ -310,14 +369,15 @@ $("btn-share").addEventListener("click", () => {
 // ---------- 6. Stats saved in this browser ----------
 // localStorage can fail (private browsing, blocked storage), so every use is wrapped in try/catch.
 function loadStats() {
+    const blank = { played: 0, bestValue: 0, streak: 0, lastDay: null };
     try {
-        return JSON.parse(localStorage.getItem("pricedInStats")) || { played: 0, best: 0, streak: 0, lastDay: null };
+        return Object.assign(blank, JSON.parse(localStorage.getItem("pricedInStats")) || {});
     } catch (e) {
-        return { played: 0, best: 0, streak: 0, lastDay: null };
+        return blank;
     }
 }
 
-function saveStats(score, maxScore) {
+function saveStats() {
     const stats = loadStats();
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -327,11 +387,11 @@ function saveStats(score, maxScore) {
         stats.lastDay = today;
     }
     stats.played += 1;
-    stats.best = Math.max(stats.best, score);
+    stats.bestValue = Math.max(stats.bestValue, portfolio);
 
     try { localStorage.setItem("pricedInStats", JSON.stringify(stats)); } catch (e) { /* stats just won't be saved */ }
 
-    $("stats").textContent = `Rounds played: ${stats.played} · Best: ${stats.best}/${maxScore} · Day streak: ${stats.streak}`;
+    $("stats").textContent = `Rounds played: ${stats.played} · Best portfolio: ${money(stats.bestValue)} · Day streak: ${stats.streak}`;
     showStreak();
 }
 
@@ -349,7 +409,7 @@ function showOnly(screenId) {
 
 // Show one group of buttons and hide the others
 function showButtons(groupId) {
-    ["dir-buttons", "size-buttons", "next-step", "end-step"].forEach(id => { $(id).hidden = id !== groupId; });
+    ["dir-buttons", "size-buttons", "stake-buttons", "next-step", "end-step"].forEach(id => { $(id).hidden = id !== groupId; });
 }
 
 // Re-run a one-off animation on an element

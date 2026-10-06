@@ -21,6 +21,7 @@
             </div>
             <div class="topbar-meta">
                 <span id="progress"></span>
+                <span id="portfolio" class="portfolio" title="Your portfolio"></span>
                 <span id="streak" class="streak"></span>
             </div>
         </header>
@@ -28,25 +29,31 @@
         <main class="stage">
 
             <!-- Screen 1: the card the player reads before guessing -->
-            <section id="card" class="screen">
-                <p id="when" class="kicker"></p>
-                <h1 id="disguise" class="headline"></h1>
-                <p id="mood" class="body-text"></p>
-
-                <div class="panel">
-                    <table id="rows" class="rows"></table>
+            <section id="card" class="screen two-col">
+                <div class="col">
+                    <p id="when" class="kicker"></p>
+                    <h1 id="disguise" class="headline"></h1>
+                    <p id="mood" class="body-text"></p>
                 </div>
 
-                <div class="clue">
-                    <p class="label gold">Also announced</p>
-                    <p id="other-news"></p>
-                </div>
+                <div class="col">
+                    <div class="panel">
+                        <table id="rows" class="rows"></table>
+                    </div>
 
-                <h2 class="question">What did the stock do the next day?</h2>
+                    <div class="clue">
+                        <p class="label gold">Also announced</p>
+                        <p id="other-news"></p>
+                    </div>
+
+                    <h2 class="question">What did the stock do the next day?</h2>
+                    <p class="note rules">You start with a $10,000 portfolio. Call the direction and size, then bet part of it. Both right: you win your bet. Right direction but wrong size: you win half. Wrong direction: you lose your bet.</p>
+                </div>
             </section>
 
             <!-- Screen 2: the reveal after the player has guessed -->
-            <section id="reveal" class="screen" hidden aria-live="polite">
+            <section id="reveal" class="screen two-col" hidden aria-live="polite">
+                <div class="col">
                 <p id="reveal-when" class="kicker fade-up"></p>
                 <h1 id="company" class="headline fade-up d1"></h1>
 
@@ -57,6 +64,14 @@
                     </div>
                     <div id="chart" class="chart"></div>
                     <p id="chart-note" class="note"></p>
+                </div>
+                </div>
+
+                <div class="col">
+                <div class="panel pnl-panel fade-up d2">
+                    <span class="label">Your bet</span>
+                    <span id="pnl" class="pnl-number"></span>
+                    <span id="pnl-detail" class="muted"></span>
                 </div>
 
                 <div class="verdicts fade-up d2">
@@ -75,6 +90,7 @@
                     <p id="why" class="body-text"></p>
                     <p id="tag" class="tag"></p>
                     <a id="source" class="source" target="_blank" rel="noopener">Source</a>
+                </div>
                 </div>
             </section>
 
@@ -112,6 +128,15 @@
                 <div class="btn-row">
                     <button id="btn-small" class="btn btn-neutral">Small<span>under 5%</span></button>
                     <button id="btn-big" class="btn btn-neutral">Big<span>5% or more</span></button>
+                </div>
+            </div>
+
+            <div id="stake-buttons" class="size-step" hidden>
+                <p class="hint">You called <strong id="picked-2"></strong>. How much do you bet on it?</p>
+                <div class="btn-row">
+                    <button id="btn-low" class="btn btn-neutral">Low<span id="amt-low"></span></button>
+                    <button id="btn-mid" class="btn btn-neutral">Medium<span id="amt-mid"></span></button>
+                    <button id="btn-high" class="btn btn-neutral">High<span id="amt-high"></span></button>
                 </div>
             </div>
 
