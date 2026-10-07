@@ -522,6 +522,7 @@ code {
 .grid-row { display: flex; align-items: center; gap: 6px; }
 .grid-row .sq { width: 26px; height: 26px; border-radius: 6px; background: #3A4350; }
 .grid-row .sq.hit { background: var(--up); }
+.grid-row .sq.miss { background: var(--down); }
 .grid-row .grid-name { margin-left: 8px; font-size: 15px; color: var(--text-soft); }
 .grid-pnl { margin-left: auto; font-family: var(--mono); font-size: 14px; font-weight: 600; }
 
@@ -643,8 +644,10 @@ code {
     .squares i { width: 12px; height: 12px; }
     .stage { padding: 18px 10px 16px; }
     .panel-main { padding: 22px 18px 18px; }
-    .stats { grid-template-columns: 1fr 1fr; }
-    .stats .stat:last-child { grid-column: span 2; }
+    .stats { gap: 6px; }
+    .stat { padding: 10px; }
+    .stat-value { font-size: 14px; }
+    .stat .label { font-size: 10px; letter-spacing: 0.08em; }
 }
 
 /* Respect people who turn animations off */

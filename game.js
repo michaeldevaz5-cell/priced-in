@@ -117,19 +117,32 @@ function startHomeChart() {
         canvas.height = canvas.clientHeight * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const count = Math.ceil(canvas.clientWidth / step) + 3;
-        const mid = canvas.clientHeight * 0.7;
         if (points.length === 0) {
-            let v = mid;
+            const [lo, hi] = band();
+            let v = (lo + hi) / 2;
             for (let i = 0; i < count; i++) { v = nextValue(v); points.push(v); }
         }
         while (points.length < count) points.push(nextValue(points[points.length - 1]));
     }
 
-    // Each new price drifts slightly up, with noise, and is pulled back if it wanders off-screen
-    function nextValue(v) {
+    // The strip of screen the line is allowed to use. On the home screen it stays
+    // below the title and button so it never runs through the text.
+    function band() {
         const h = canvas.clientHeight;
-        const pull = (h * 0.62 - v) * 0.02;
-        return Math.min(h * 0.92, Math.max(h * 0.3, v - 0.35 + pull + (Math.random() - 0.5) * 14));
+        if ($("home").hidden) return [h * 0.3, h * 0.92];
+        const contentBottom = document.querySelector(".home-inner").getBoundingClientRect().bottom - 48;
+        const lo = Math.min(contentBottom + 32, h - 70);
+        return [lo, h - 16];
+    }
+
+    // Each new price drifts with noise, pulled towards the middle of the band.
+    // If the band moves, the line glides into it rather than jumping.
+    function nextValue(v) {
+        const [lo, hi] = band();
+        const noise = (Math.random() - 0.5) * Math.min(14, (hi - lo) / 5);
+        const pull = ((lo + hi) / 2 - v) * 0.03;
+        const target = Math.min(hi, Math.max(lo, v - 0.35 + pull + noise));
+        return v + Math.max(-4, Math.min(4, target - v));
     }
 
     function draw(now) {
@@ -519,16 +532,18 @@ function showResults() {
     $("final-score").className = "headline big fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
     showSquares();
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
-    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret)}`;
+    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret, results.filter(r => !r.dirRight).length)}`;
 
     const grid = $("grid");
     grid.innerHTML = "";
     results.forEach(r => {
         const row = document.createElement("div");
         row.className = "grid-row";
-        [r.dirRight, r.sizeRight].forEach(hit => {
+        // Same colours as the HUD: wrong direction = red; right direction = green,
+        // with the second square green (size right) or grey (size wrong)
+        squareStates(r).forEach(state => {
             const sq = document.createElement("div");
-            sq.className = "sq" + (hit ? " hit" : "");
+            sq.className = "sq " + state;
             row.appendChild(sq);
         });
         const name = document.createElement("span");
@@ -550,11 +565,20 @@ function showResults() {
     window.scrollTo(0, 0);
 }
 
-function scoreLine(ret) {
-    if (ret >= 50) return "Outstanding. You read the expectations, not the headlines.";
-    if (ret >= 15) return "Strong. You're starting to think like the market.";
-    if (ret >= 0) return "You stayed in the green. The market fooled you a few times.";
-    return "The market got you. That's the point: good news isn't always good for the price.";
+function squareStates(r) {
+    if (!r.dirRight) return ["miss", "miss"];
+    return ["hit", r.sizeRight ? "hit" : "half"];
+}
+
+// The message depends on the return AND on how many directions were wrong
+function scoreLine(ret, wrong) {
+    const fooled = wrong === 0 ? "The market didn't fool you once."
+        : wrong === 1 ? "The market fooled you once."
+        : `The market fooled you ${wrong} times.`;
+    if (ret >= 50) return `Outstanding. ${fooled}`;
+    if (ret >= 15) return `Strong. ${fooled}`;
+    if (ret >= 0) return `You stayed in the green. ${fooled}`;
+    return `${fooled} That's the point: good news isn't always good for the price.`;
 }
 
 $("btn-replay").addEventListener("click", startRound);
@@ -563,7 +587,8 @@ $("btn-replay").addEventListener("click", startRound);
 $("btn-share").addEventListener("click", () => {
     const ret = roundReturn();
     const retText = (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
-    const squares = results.map(r => (r.dirRight ? "🟩" : "⬜") + (r.sizeRight ? "🟩" : "⬜")).join(" ");
+    const emoji = { hit: "🟩", half: "⬜", miss: "🟥" };
+    const squares = results.map(r => squareStates(r).map(s => emoji[s]).join("")).join(" ");
     const text = `Priced In: ${money(portfolio)} (${retText})\n${squares}\n${SITE_URL}`;
 
     if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
