@@ -163,13 +163,10 @@ function startHomeChart() {
             if (i === 0) ctx.moveTo(x, v); else ctx.lineTo(x, v);
         });
 
-        // Glowing gold line
-        ctx.strokeStyle = "rgba(232, 176, 74, 0.55)";
+        // Gold line
+        ctx.strokeStyle = "rgba(245, 196, 81, 0.45)";
         ctx.lineWidth = 2;
-        ctx.shadowColor = "rgba(232, 176, 74, 0.6)";
-        ctx.shadowBlur = 12;
         ctx.stroke();
-        ctx.shadowBlur = 0;
 
         // Faint fill underneath
         const lastX = (points.length - 1) * step - offset;
@@ -177,8 +174,8 @@ function startHomeChart() {
         ctx.lineTo(-offset, h);
         ctx.closePath();
         const fill = ctx.createLinearGradient(0, h * 0.3, 0, h);
-        fill.addColorStop(0, "rgba(232, 176, 74, 0.10)");
-        fill.addColorStop(1, "rgba(232, 176, 74, 0)");
+        fill.addColorStop(0, "rgba(245, 196, 81, 0.06)");
+        fill.addColorStop(1, "rgba(245, 196, 81, 0)");
         ctx.fillStyle = fill;
         ctx.fill();
 
@@ -453,8 +450,8 @@ function drawChart(puzzle, isUp) {
     // Only numbers go into this string, never text from the cards
     $("chart").innerHTML = `
         <svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Price line ${isUp ? "rising" : "falling"} after the results">
-            <line x1="${markerX}" y1="0" x2="${markerX}" y2="${H}" stroke="#3A4350" stroke-width="1" stroke-dasharray="3 4"></line>
-            <text x="${markerX}" y="${H + 12}" fill="#8A939E" font-family="IBM Plex Mono, monospace" font-size="10" text-anchor="middle">results</text>
+            <line x1="${markerX}" y1="0" x2="${markerX}" y2="${H}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="3 4"></line>
+            <text x="${markerX}" y="${H + 12}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="11" text-anchor="middle">results</text>
             <path class="area-fade" d="${areaPath}" fill="${colour}" fill-opacity="0.10"></path>
             <path class="line-draw" pathLength="1" d="${linePath}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
             <circle class="dot-pop" cx="${endX}" cy="${endY}" r="6" fill="${colour}"></circle>
