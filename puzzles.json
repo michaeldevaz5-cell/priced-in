@@ -84,5 +84,22 @@
         "tag": "No surprise, no move",
         "source": "https://www.cnbc.com/2024/10/31/apple-aapl-q4-earnings-report-2024.html",
         "prices": [236.48, 235.86, 230.76, 230.57, 231.41, 233.40, 233.67, 230.10, 225.91, 222.91]
+      },
+      {
+        "id": 6,
+        "disguise": "A leading semiconductor manufacturer",
+        "when": "August 2024",
+        "mood": "Investors avoided the stock, which fell over 35% by mid-2024, due to severe anxiety over market share losses to competitors and massive cash burn from its costly factory expansion.",
+        "rows": [
+          { "label": "Revenue ($bn)", "expected": 12.94, "actual": 12.83 },
+          { "label": "EPS ($)", "expected": 0.10, "actual": 0.02 }
+        ],
+        "otherNews": "It said it would cut more than 15% of its staff, stop paying its dividend and cut $10bn of costs. For next quarter it forecast a loss of 3 cents a share on $12.5–13.5bn of revenue, while analysts expected a 31-cent profit on $14.35bn.",
+        "answer": { "direction": "down", "movePct": -26.1 },
+        "company": "Intel",
+        "why": "The results missed, the forecast was far below expectations, and scrapping the dividend and cutting 15% of staff showed how deep the trouble ran. Investors worried because these expensive factories operated with massive unused capacity, which severely dragged down profitability and caused a negative free cash flow of billions. At the same time, the high upfront costs failed to generate immediate revenue because market demand had shifted largely toward the specialized AI infrastructure built by competitors.",
+        "tag": "Bad news is bad news",
+        "source": "https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html",
+        "prices": [33.37, 32.95, 31.70, 31.10, 31.35, 30.83, 30.13, 30.74, 29.05, 21.48]
       }
   ]

@@ -18,7 +18,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 | 8 | Nvidia, Feb 2026 | To write |
 | 9 | Meta, Feb 2024 (control) | To write |
 | 10 | Amazon, Feb 2024 (control) | To write |
-| 11 | Intel, Aug 2024 (control) | To write |
+| 11 | Intel, Aug 2024 (control) | ✅ In `puzzles.json`, with `prices` (move −26.1%: $29.05 → $21.48) |
 | 12 | Apple, Oct 2024 (small move) | ✅ In `puzzles.json`, with `prices` (move −1.3%: $225.91 → $222.91) |
 
 Not used for now:
@@ -120,7 +120,7 @@ If every card is a trick, players learn to "always pick the opposite," which tur
 
 **Intel, reported 1 Aug 2024 (Q2 2024): bad → down**
 - Revenue $12.8bn, $200m below the midpoint of its own guidance; adjusted EPS $0.02 vs $0.10 expected; net loss $1.61bn.
-- Q3 guidance: revenue $12.5–13.5bn, adjusted EPS −$0.03. ⚠ Find the consensus figures for Q2 revenue and Q3 guidance (CNBC's LSEG article).
+- Q2 consensus (LSEG): revenue $12.94bn, EPS $0.10. Q3 guidance: revenue $12.5–13.5bn, adjusted EPS −$0.03, vs $14.35bn and $0.31 expected. Source: [CNBC](https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html)
 - Also announced: dividend suspended, 15%+ of staff cut, $10bn cost-cutting plan.
 - Stock fell 26% on 2 Aug 2024 to $21.48, its worst day in 50 years.
 - Sources: [CNBC via NBC Chicago](https://nbcchicago.com/news/business/money-report/intels-22-share-plunge-drags-down-global-chip-stocks-from-tsmc-to-samsung/3509519/?amp=1), [Motley Fool](https://www.fool.com/data-news/2024/08/01/intel-q2-losses-trigger-layoffs-other-cuts)

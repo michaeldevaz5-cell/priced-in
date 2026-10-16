@@ -107,12 +107,13 @@ Before saying a change works:
 
 ## Current state (16 Oct 2026)
 
-- **Cards:** 5 so far, in `puzzles.json`:
+- **Cards:** 6 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `prices`
   - Netflix, Apr 2024: has `prices`; its text fields were drafted by Claude and Michael plans to rewrite them
   - Nike, Jun 2025: has `prices`
   - Palantir, Nov 2025: has `prices`; text fields drafted by Claude at Michael's request
   - Apple, Oct 2024: has `prices`; the first small move (−1.3%); `otherNews` drafted by Claude at Michael's request
+  - Intel, Aug 2024: has `prices`; the first control card (bad news → down); `otherNews` and the first sentence of `why` drafted by Claude at Michael's request
 - **Every card has `prices`.** Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Small moves needed:** almost every card is a big move, so the game needs some small-move cards to stop "always pick Big" from winning.
