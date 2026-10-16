@@ -38,6 +38,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 | `game.js` | All logic (see below) |
 | `puzzles.json` | The cards. **Michael's file.** |
 | `README.md` | Public description, credits, card format, how to run locally |
+| `notes/card-research.md` | **The card research:** which companies are next, the verified figures and sources for each, and how to find the data. Check Michael's cards against it. Not loaded by the site. |
 
 ### game.js map
 
@@ -110,17 +111,7 @@ Before saying a change works:
   - Meta, Feb 2023
   - Netflix, Apr 2024: its text fields were drafted by Claude and Michael plans to rewrite them
 - **Neither card has `prices` yet,** so the reveal chart is the 3-point fallback. Adding real prices is the biggest visual improvement left, and it's content, not code.
-- **Michael is writing about 10 more cards:**
-  - Nike Jun 2025
-  - Palantir Nov 2025
-  - Microsoft Jan 2026
-  - Tesla Apr 2024
-  - Oracle Sep 2025
-  - Nvidia Feb 2026
-  - Meta Feb 2024
-  - Amazon Feb 2024
-  - Intel Aug 2024
-  - Apple Oct 2024
+- **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Small moves needed:** almost every card is a big move, so the game needs some small-move cards to stop "always pick Big" from winning.
 - **Friend test:** 18 Oct 2026.
 - **Possible later change (not decided):** 1 card a day plus a Practice mode, instead of playing every card in one round. Don't build this unless Michael asks.

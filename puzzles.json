@@ -30,7 +30,22 @@
         "why": "The quarter was great, but investors pay for future growth. A weak forecast and hiding subscriber numbers suggested the fast growth was slowing.",
         "tag": "Watch the forecast",
         "source": "https://www.cnbc.com/2024/04/18/netflix-nflx-earnings-q1-2024.html"
+      },
+      {
+        "id": 3,
+        "disguise": "A mature, blue-chip global powerhouse",
+        "when": "June 2025",
+        "mood": "The stock was hovering near multi-year lows heading into the print. Investors were deeply pessimistic, braced for a brutal 87% plunge in quarterly profits and an ongoing exodus of market share to fast-growing rivals.",
+        "rows": [
+          { "label": "Revenue ($bn)", "expected": 10.72, "actual": 11.10 },
+          { "label": "EPS ($)", "expected": 0.13, "actual": 0.14 }
+        ],
+        "otherNews": "It warned that new tariffs could add costs of approximately $1bn.",
+        "answer": { "direction": "up", "movePct": 15.2 },
+        "company": "Nike",
+        "why": "The stock surged 15% in a single session after better-than-feared Q4 earnings. Investors found relief in early signs that the new CEO's plan to revive product innovation and repair wholesale relationships was taking hold.",
+        "tag": "Low bar",
+        "source": "https://www.sportico.com/business/commerce/2025/nike-stock-up-biggest-day-gain-since-2021-1234858416/",
+        "prices": [60.53, 61.90, 60.00, 59.51, 59.79, 60.78, 61.42, 60.83, 62.54, 72.04]
       }
-    
-
   ]
