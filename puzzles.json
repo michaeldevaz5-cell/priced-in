@@ -47,5 +47,40 @@
         "tag": "Low bar",
         "source": "https://www.sportico.com/business/commerce/2025/nike-stock-up-biggest-day-gain-since-2021-1234858416/",
         "prices": [60.53, 61.90, 60.00, 59.51, 59.79, 60.78, 61.42, 60.83, 62.54, 72.04]
+      },
+      {
+        "id": 4,
+        "disguise": "A red-hot US software company",
+        "when": "November 2025",
+        "mood": "The stock had climbed about 34% since the start of August to a record high, and analysts were racing to keep up. It now traded at more than 200 times next year's expected profits, against about 35 for the biggest US tech companies.",
+        "rows": [
+          { "label": "Revenue ($bn)", "expected": 1.09, "actual": 1.18 },
+          { "label": "EPS ($)", "expected": 0.17, "actual": 0.21 }
+        ],
+        "otherNews": "It forecast next-quarter revenue of just over $1.3bn, ahead of the $1.2bn analysts expected, and raised its full-year forecast to $4.4bn from $4.15bn, despite fears the US government shutdown would hurt sales.",
+        "answer": { "direction": "down", "movePct": -7.9 },
+        "company": "Palantir",
+        "why": "The results were excellent, but at that price investors already expected excellent. A beat and a raise couldn't justify paying even more, so the stock fell.",
+        "tag": "Priced in",
+        "source": "https://finance.yahoo.com/news/palantir-stock-falls-nearly-8-on-valuation-fears-after-results-top-wall-street-estimates-211457379.html",
+        "prices": [175.49, 180.48, 184.63, 189.18, 189.60, 198.81, 194.55, 200.47, 207.18, 190.74]
+      },
+      {
+        "id": 5,
+        "disguise": "A market-leading technology company",
+        "when": "October 2024",
+        "mood": "Investors were cautious, fearing weak sales of its new phone, slow uptake of its new AI features, and China headwinds before earnings.",
+        "rows": [
+          { "label": "Revenue ($bn)", "expected": 94.58, "actual": 94.93 },
+          { "label": "EPS ($)", "expected": 1.60, "actual": 1.64 },
+          { "label": "Services revenue ($bn)", "expected": 25.28, "actual": 24.97 }
+        ],
+        "otherNews": "It forecast only 'low to mid-single digit' sales growth for the holiday quarter, and said early sales of its newest phone were stronger than last year's model.",
+        "answer": { "direction": "down", "movePct": -1.3 },
+        "company": "Apple",
+        "why": "Apple reported a slight earnings beat alongside conservative low-to-mid single-digit revenue growth guidance for the upcoming holiday quarter. With no dramatic operational surprises to shift sentiment, the market reacted modestly.",
+        "tag": "No surprise, no move",
+        "source": "https://www.cnbc.com/2024/10/31/apple-aapl-q4-earnings-report-2024.html",
+        "prices": [236.48, 235.86, 230.76, 230.57, 231.41, 233.40, 233.67, 230.10, 225.91, 222.91]
       }
   ]

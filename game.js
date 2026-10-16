@@ -266,10 +266,13 @@ function showRows(rows) {
             chipClass = "chip-inline";
         }
 
+        // Show both numbers to the same decimals, so 1.6 vs 1.64 reads as 1.60 vs 1.64
+        const places = Math.max(decimals(row.expected), decimals(row.actual));
+
         const line = document.createElement("tr");
         line.appendChild(cell("td", row.label));
-        line.appendChild(cell("td", row.expected, "num"));
-        line.appendChild(cell("td", row.actual, "num actual"));
+        line.appendChild(cell("td", row.expected.toFixed(places), "num"));
+        line.appendChild(cell("td", row.actual.toFixed(places), "num actual"));
 
         const chipCell = document.createElement("td");
         const chip = document.createElement("span");
@@ -288,6 +291,12 @@ function showRows(rows) {
 
         table.appendChild(line);
     });
+}
+
+// How many decimal places a number has, e.g. 1.64 → 2, 32 → 0
+function decimals(n) {
+    const text = String(n);
+    return text.includes(".") ? text.split(".")[1].length : 0;
 }
 
 // Make one table cell. textContent (not innerHTML) keeps text as plain text.

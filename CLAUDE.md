@@ -107,10 +107,12 @@ Before saying a change works:
 
 ## Current state (16 Oct 2026)
 
-- **Cards:** 3 so far, in `puzzles.json`:
+- **Cards:** 5 so far, in `puzzles.json`:
   - Meta, Feb 2023
   - Netflix, Apr 2024: its text fields were drafted by Claude and Michael plans to rewrite them
   - Nike, Jun 2025: has `prices`
+  - Palantir, Nov 2025: has `prices`; text fields drafted by Claude at Michael's request
+  - Apple, Oct 2024: has `prices`; the first small move (−1.3%); `otherNews` drafted by Claude at Michael's request
 - **Meta and Netflix don't have `prices` yet,** so their reveal chart is the 3-point fallback. Adding real prices is the biggest visual improvement left, and it's content, not code.
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Small moves needed:** almost every card is a big move, so the game needs some small-move cards to stop "always pick Big" from winning.
