@@ -8,8 +8,8 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 
 | Card | Event | Status |
 |---|---|---|
-| 1 | Meta, Feb 2023 | ✅ In `puzzles.json` (needs `prices`) |
-| 2 | Netflix, Apr 2024 | ✅ In `puzzles.json` (needs `prices`; text to be rewritten by Michael) |
+| 1 | Meta, Feb 2023 | ✅ In `puzzles.json`, with `prices` |
+| 2 | Netflix, Apr 2024 | ✅ In `puzzles.json`, with `prices` (text to be rewritten by Michael) |
 | 3 | Nike, Jun 2025 | ✅ In `puzzles.json`, with `prices` (move +15.2%: $62.54 → $72.04) |
 | 4 | Palantir, Nov 2025 | ✅ In `puzzles.json`, with `prices` (move −7.9%: $207.18 → $190.74) |
 | 5 | Microsoft, Jan 2026 | To write |
@@ -81,7 +81,7 @@ Not used for now:
 **Meta, reported 1 Feb 2023 (Q4 2022)** (card 1)
 - EPS $1.76 vs $2.26 expected: a **big miss**. Revenue $32.17bn vs $31.65bn, but down 4% on the year.
 - Also announced: a $40bn buyback, 2023 cost guidance cut to $89–95bn (from $94–100bn), and the "year of efficiency."
-- Stock rose 23%+ on 2 Feb. ⚠ Confirm the exact close.
+- Stock rose 23.3% on 2 Feb ($153.12 → $188.77, Yahoo closes).
 - Sources: [Yahoo Finance](https://finance.yahoo.com/news/meta-earnings-stock-spikes-after-better-than-expected-revenue-buyback-announcement-211912404.html), [CNBC](https://www.cnbc.com/2023/02/02/meta-stock-rockets-20percent-on-solid-earnings-analyst-reactions.html)
 
 **Tesla, reported 23 Apr 2024 (Q1 2024)**
