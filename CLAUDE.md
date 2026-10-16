@@ -51,7 +51,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
   - Right direction, wrong size: +stake × 0.5.
   - Wrong direction: −stake.
   - The stake is a share of the *current* portfolio.
-- **Reveal chart:** `drawChart()` draws a smooth monotone-cubic SVG path (`smoothPath()`) at the panel's measured width. It must be called *after* the reveal panel is visible. Without `prices` it falls back to a 3-point line.
+- **Reveal chart:** `drawChart()` draws a smooth monotone-cubic SVG path (`smoothPath()`) at the panel's measured width. It must be called *after* the reveal panel is visible. Without `prices` it falls back to a 3-point line. `addChartHover()` lets players hover or tap along the line to see each day's close and change; it's only added for real `prices`, never the fallback.
 - **Squares:** `squareStates(r)` gives one shared colour rule for the results grid and the share text:
   - wrong direction: 🟥🟥
   - right direction, right size: 🟩🟩

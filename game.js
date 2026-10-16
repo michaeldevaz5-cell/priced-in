@@ -428,8 +428,9 @@ function drawChart(puzzle, isUp) {
 
     let prices = puzzle.prices;
     let note;
-    if (Array.isArray(prices) && prices.length >= 2) {
-        note = "Daily closing prices. The dashed line marks the results.";
+    const realPrices = Array.isArray(prices) && prices.length >= 2;
+    if (realPrices) {
+        note = "Daily closing prices. Hover or tap the line to see each day.";
     } else {
         prices = [100, 100, 100 * (1 + puzzle.answer.movePct / 100)];
         note = "Close before the results → close the day after.";
@@ -455,8 +456,84 @@ function drawChart(puzzle, isUp) {
             <path class="area-fade" d="${areaPath}" fill="${colour}" fill-opacity="0.10"></path>
             <path class="line-draw" pathLength="1" d="${linePath}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
             <circle class="dot-pop" cx="${endX}" cy="${endY}" r="6" fill="${colour}"></circle>
+            <line class="hover-line" y1="0" y2="${H}" stroke="var(--text-soft)" stroke-width="1" visibility="hidden"></line>
+            <circle class="hover-dot" r="5" fill="var(--text)" stroke="${colour}" stroke-width="3" visibility="hidden"></circle>
         </svg>`;
     $("chart-note").textContent = note;
+
+    // Made-up fallback points aren't real prices, so only real ones get the hover
+    if (realPrices) addChartHover(prices, x, y);
+}
+
+// Hover (or tap and drag on a phone) along the chart to see each day's close
+// and how much it changed from the day before.
+function addChartHover(prices, x, y) {
+    const chart = $("chart");
+    const svg = chart.querySelector("svg");
+    const line = svg.querySelector(".hover-line");
+    const dot = svg.querySelector(".hover-dot");
+    const last = prices.length - 1;
+
+    const tip = document.createElement("div");
+    tip.className = "chart-tip";
+    tip.hidden = true;
+    const tipDay = document.createElement("span");
+    const tipPrice = document.createElement("strong");
+    const tipChange = document.createElement("span");
+    tip.append(tipDay, tipPrice, tipChange);
+    chart.appendChild(tip);
+
+    function dayLabel(i) {
+        if (i === last) return "Day after results";
+        if (i === last - 1) return "Results day";
+        const n = last - 1 - i;
+        return n === 1 ? "1 trading day before" : n + " trading days before";
+    }
+
+    function show(clientX) {
+        const box = svg.getBoundingClientRect();
+        const scale = svg.viewBox.baseVal.width / box.width;
+        const svgX = (clientX - box.left) * scale;
+
+        // The closest day to the pointer
+        let i = 0;
+        for (let j = 1; j <= last; j++) {
+            if (Math.abs(x(j) - svgX) < Math.abs(x(i) - svgX)) i = j;
+        }
+
+        line.setAttribute("x1", x(i));
+        line.setAttribute("x2", x(i));
+        dot.setAttribute("cx", x(i));
+        dot.setAttribute("cy", y(prices[i]));
+        line.setAttribute("visibility", "visible");
+        dot.setAttribute("visibility", "visible");
+
+        tipDay.textContent = dayLabel(i);
+        tipPrice.textContent = "$" + prices[i].toFixed(2);
+        if (i > 0) {
+            const change = (prices[i] - prices[i - 1]) / prices[i - 1] * 100;
+            tipChange.textContent = (change >= 0 ? "+" : "−") + Math.abs(change).toFixed(1) + "%";
+            tipChange.className = change >= 0 ? "is-up" : "is-down";
+        } else {
+            tipChange.textContent = "";
+        }
+
+        // Keep the label inside the chart at both ends
+        tip.hidden = false;
+        const half = tip.offsetWidth / 2;
+        const left = Math.min(Math.max(x(i) / scale, half), box.width - half);
+        tip.style.left = left + "px";
+    }
+
+    function hide() {
+        line.setAttribute("visibility", "hidden");
+        dot.setAttribute("visibility", "hidden");
+        tip.hidden = true;
+    }
+
+    svg.addEventListener("pointermove", e => show(e.clientX));
+    svg.addEventListener("pointerdown", e => show(e.clientX));
+    svg.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") hide(); });   // on a phone, the label stays after you lift your finger
 }
 
 // Turn a list of points into a smooth curve that still passes through every point.
