@@ -10,7 +10,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 |---|---|---|
 | 1 | Meta, Feb 2023 | ✅ In `puzzles.json` (needs `prices`) |
 | 2 | Netflix, Apr 2024 | ✅ In `puzzles.json` (needs `prices`; text to be rewritten by Michael) |
-| 3 | Nike, Jun 2025 | To write |
+| 3 | Nike, Jun 2025 | ✅ In `puzzles.json`, with `prices` (move +15.2%: $62.54 → $72.04) |
 | 4 | Palantir, Nov 2025 | To write |
 | 5 | Microsoft, Jan 2026 | To write |
 | 6 | Tesla, Apr 2024 | To write |

@@ -26,7 +26,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 
 - **Stack:** static site only. Plain HTML, CSS and vanilla JS. No frameworks, no build step, no npm packages in the site, no backend, no accounts, no payments, no analytics.
 - **Storage:** `localStorage` only, and every read and write is wrapped in try/catch.
-- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards. Don't add features or restyle anything. Only bug fixes are allowed until Michael has written his next batch of cards and run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
+- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards, then restyled once more on 16 Oct 2026 (one font, Rubik; simpler flat colours; chunky buttons with a bottom edge). Don't add features or restyle anything. Only bug fixes are allowed until Michael has written his next batch of cards and run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
 - **Commits:** end the message with `(code by Claude)`, e.g. `Fix results colours (code by Claude)`. Michael commits and pushes himself in VS Code unless he asks you to.
 
 ## Files
@@ -105,12 +105,13 @@ Before saying a change works:
 1. Play a full round (every card through to Results) on a laptop width (~1440px) and a phone width (390px).
 2. Check the console for errors.
 
-## Current state (9 Oct 2026)
+## Current state (16 Oct 2026)
 
-- **Cards:** 2 so far, in `puzzles.json`:
+- **Cards:** 3 so far, in `puzzles.json`:
   - Meta, Feb 2023
   - Netflix, Apr 2024: its text fields were drafted by Claude and Michael plans to rewrite them
-- **Neither card has `prices` yet,** so the reveal chart is the 3-point fallback. Adding real prices is the biggest visual improvement left, and it's content, not code.
+  - Nike, Jun 2025: has `prices`
+- **Meta and Netflix don't have `prices` yet,** so their reveal chart is the 3-point fallback. Adding real prices is the biggest visual improvement left, and it's content, not code.
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Small moves needed:** almost every card is a big move, so the game needs some small-move cards to stop "always pick Big" from winning.
 - **Friend test:** 18 Oct 2026.
