@@ -20,6 +20,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 | 10 | Amazon, Feb 2024 (control) | To write |
 | 11 | Intel, Aug 2024 (control) | ✅ In `puzzles.json`, with `prices` (move −26.1%: $29.05 → $21.48) |
 | 12 | Apple, Oct 2024 (small move) | ✅ In `puzzles.json`, with `prices` (move −1.3%: $225.91 → $222.91) |
+| 13 | Alphabet, Oct 2024 (small move, control) | ✅ In `puzzles.json`, with `prices` (move +2.8%: $169.68 → $174.46) |
 
 Not used for now:
 

@@ -101,5 +101,22 @@
         "tag": "Bad news is bad news",
         "source": "https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html",
         "prices": [33.37, 32.95, 31.70, 31.10, 31.35, 30.83, 30.13, 30.74, 29.05, 21.48]
+      },
+      {
+        "id": 7,
+        "disguise": "A cloud computing company",
+        "when": "October 2024",
+        "mood": "Investors were anxious, weighing legal antitrust threats, generative AI search disruption, and heavy spending, leaving the underperforming stock range-bound.",
+        "rows": [
+          { "label": "Revenue ($bn)", "expected": 86.30, "actual": 88.27 },
+          { "label": "EPS ($)", "expected": 1.85, "actual": 2.12 }
+        ],
+        "otherNews": "Its cloud business grew nearly 35% to $11.35bn on demand for its AI products, overall revenue grew 15%, and its new finance chief said it would keep cutting costs.",
+        "answer": { "direction": "up", "movePct": 2.8 },
+        "company": "Alphabet",
+        "why": "Although the company comfortably beat expectations behind strong core segment growth, ongoing regulatory pressure and surging capital spending limited broader investor enthusiasm.",
+        "tag": "Good news, modest move",
+        "source": "https://www.cnbc.com/2024/10/29/alphabet-to-report-q3-earnings-after-the-bell.html",
+        "prices": [162.93, 163.42, 164.07, 165.14, 162.78, 162.72, 165.27, 166.72, 169.68, 174.46]
       }
   ]
