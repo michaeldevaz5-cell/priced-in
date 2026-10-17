@@ -26,14 +26,14 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 
 - **Stack:** static site only. Plain HTML, CSS and vanilla JS. No frameworks, no build step, no npm packages in the site, no backend, no accounts, no payments, no analytics.
 - **Storage:** `localStorage` only, and every read and write is wrapped in try/catch.
-- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards, then restyled once more on 16 Oct 2026 (one font, Rubik; simpler flat colours; chunky buttons with a bottom edge). Don't add features or restyle anything. Only bug fixes are allowed until Michael has written his next batch of cards and run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
+- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards, then restyled once more on 16 Oct 2026 (one font, Rubik; simpler flat colours; chunky buttons with a bottom edge). On 17 Oct Michael chose to build daily mode (see below) before the friend test. Don't add features or restyle anything else. Only bug fixes are allowed until Michael has run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
 - **Commits:** end the message with `(code by Claude)`, e.g. `Fix results colours (code by Claude)`. Michael commits and pushes himself in VS Code unless he asks you to.
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `index.html` | Structure. `#home` (start screen) and `#app` (HUD, `main.stage` with `#card` / `#reveal` / `#results` / `#error` panels, sticky `footer.actions` with button steps) |
+| `index.html` | Structure. `#home` (start screen) and `#app` (HUD, `main.stage` with `#card` / `#reveal` / `#results` / `#today` / `#week` / `#practice` / `#error` panels, sticky `footer.actions` with button steps and the `#tab-bar`) |
 | `style.css` | All styling. Colour and font tokens in `:root`; phone layout under `@media (max-width: 520px)`; reduced-motion overrides at the end |
 | `game.js` | All logic (see below) |
 | `puzzles.json` | The cards. **Michael's file.** |
@@ -45,7 +45,12 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 - **Settings at the top:** `BIG_MOVE` 5, `START_VALUE` 10000, `STAKES` {low .10, mid .25, high .50}, `HALF_WIN` 0.5, `SITE_URL`.
 - **Load:** fetch `puzzles.json`, then `showHome()`. On failure, show the `#error` panel.
 - **Home:** `buildTape()` is the scrolling ticker (made-up market words, not real stocks). `startHomeChart()` is the gold random-walk line on `#bg-chart`. Its `band()` keeps the line below the home text.
-- **Round:** `startRound()` → `showCard()` → `pickDirection` → `pickSizeChoice` → `placeBet(level)` → `showReveal()` → next card or `showResults()`.
+- **Daily mode:** 2 cards every weekday (`CARDS_PER_DAY`), taken from `puzzles.json` **in file order** starting on `DAILY_START` (Mon 26 Oct 2026). No cards at weekends. New cards must be added at the end of the file; moving or deleting one shifts every later day.
+  - Dates are local `"YYYY-MM-DD"` keys. `?day=2026-10-27` in the URL pretends it's another day, for testing.
+  - `todaysCards(key)`, `tradingDayIndex(key)`, `weekKey(key)` (Monday of that week; weekends belong to the week just ended).
+  - **Weekly portfolio:** `loadWeek()` / `storeWeek()` keep `{ week, days: { key: { start, results } } }` in localStorage `pricedInWeek`. Each result is saved as soon as the bet is placed, so leaving mid-day loses nothing. A new week files the old one in `pricedInHistory` and resets to $10,000.
+- **Menu:** `showHub(tab)` shows the Today / Week / Practice tabs (`#tab-bar` in the bottom bar). `showToday`, `showWeek` (day tiles, `drawWeekChart`, stats, `compareWithAlwaysBig`, past weeks), `showPractice`.
+- **Round:** `startDaily()` or `startPractice()` → `startRound()` → `showCard()` → `pickDirection` → `pickSizeChoice` → `placeBet(level)` → `showReveal()` → next card, or the Today tab (daily), or `showResults()` (practice). Both use `deck`, the cards in this round.
 - **Scoring:**
   - Both calls right: +stake.
   - Right direction, wrong size: +stake × 0.5.
@@ -56,7 +61,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
   - wrong direction: 🟥🟥
   - right direction, right size: 🟩🟩
   - right direction, wrong size: 🟩⬜
-- **Stats** are saved in localStorage: played, bestValue, streak, lastDay.
+- **Stats** are saved in localStorage `pricedInStats`: played, bestValue, streak, lastDay. The streak counts daily days finished on consecutive weekdays; practice doesn't touch it.
 - **Every `$("id")` in game.js must exist in index.html.** A missing id throws an error, which shows the error screen. This has happened twice, so grep for it after any HTML change.
 
 ## Card format (puzzles.json)
@@ -119,4 +124,4 @@ Before saying a change works:
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Small moves needed:** 5 of 7 cards are big moves (Apple and Alphabet are the small ones), so more small-move cards would stop "always pick Big" from winning.
 - **Friend test:** 18 Oct 2026.
-- **Possible later change (not decided):** 1 card a day plus a Practice mode, instead of playing every card in one round. Don't build this unless Michael asks.
+- **Daily mode built 17 Oct 2026:** 2 cards a weekday from Mon 26 Oct, weekly portfolio, Week tab, Practice. With 7 cards, daily cards run Mon 26 – Thu 29 Oct; after that Today says "New cards coming soon" until more are added. Tomorrow's friend test uses Practice.

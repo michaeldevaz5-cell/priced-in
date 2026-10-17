@@ -530,6 +530,70 @@ code {
 .grid-row .grid-name { margin-left: 8px; font-size: 15px; color: var(--text-soft); }
 .grid-pnl { margin-left: auto; font-family: var(--mono); font-size: 15px; font-weight: 700; }
 
+/* ---------- Today, Week and Practice ---------- */
+.hub-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+.week-total { display: flex; flex-direction: column; gap: 4px; margin-top: -6px; }
+
+/* Monday to Friday tiles, green or red by the day's result */
+.week-days {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.day-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 78px;
+    padding: 10px;
+    border-radius: 14px;
+    background: var(--raised);
+    box-shadow: 0 3px 0 var(--edge);
+}
+
+.day-tile.up { background: var(--up-bg); }
+.day-tile.down { background: var(--down-bg); }
+.day-tile.today { outline: 2px solid var(--gold); outline-offset: 2px; }
+.day-tile.future { opacity: 0.45; }
+
+.day-name { font-size: 12px; font-weight: 500; color: var(--muted); }
+.day-pnl { font-size: 15px; font-weight: 700; color: var(--muted); }
+.day-tile.up .day-pnl { color: var(--up); }
+.day-tile.down .day-pnl { color: var(--down); }
+.day-sub { font-size: 11px; color: var(--muted); }
+
+.week-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.past-weeks { display: flex; flex-direction: column; gap: 8px; }
+.past-row { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
+.past-ret { margin-left: auto; font-weight: 700; }
+
+/* The tab bar at the bottom of the menu */
+.tab-row { display: flex; gap: 8px; }
+
+.tab {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0;
+    border: none;
+    border-radius: 14px;
+    background: none;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--raised); color: var(--gold); box-shadow: 0 3px 0 var(--edge); }
+.tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 /* ---------- Bottom bar ---------- */
 .actions {
     position: sticky;
@@ -655,6 +719,10 @@ code {
     .stat { padding: 10px; }
     .stat-value { font-size: 14px; }
     .stat .label { font-size: 11px; }
+    .week-days { gap: 5px; }
+    .day-tile { padding: 8px 6px; min-height: 70px; }
+    .day-pnl { font-size: 12px; }
+    .day-sub { font-size: 10px; }
 }
 
 /* Respect people who turn animations off */

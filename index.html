@@ -27,7 +27,7 @@
 
             <div class="home-chips">
                 <span id="home-cards"></span>
-                <span>Start with $10,000</span>
+                <span>$10,000 every week</span>
                 <span>Bet on your calls</span>
             </div>
 
@@ -44,6 +44,7 @@
                     <li>Read what investors expected, what the company reported and what else it announced.</li>
                     <li>Call it: did the stock go <strong>up or down</strong> the next day? Was the move <strong>big (5%+) or small</strong>?</li>
                     <li>Bet 10%, 25% or 50% of your portfolio. Both calls right: you win your bet. Right direction, wrong size: you win half. Wrong direction: you lose it.</li>
+                    <li>Two new cards every weekday. Your portfolio carries over from day to day and starts again at $10,000 every Monday.</li>
                     <li>The catch: good news doesn't always mean up. Prices move on <em>surprise</em>, not on whether the news sounds good.</li>
                 </ol>
             </details>
@@ -57,7 +58,7 @@
 
         <!-- HUD: home button, portfolio, progress, return -->
         <header class="hud">
-            <button id="btn-home" class="hud-home" aria-label="Back to the start">
+            <button id="btn-home" class="hud-home" aria-label="Back to the menu">
                 <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 16 L8 10 L12 13 L20 4"></path><path d="M15 4 H20 V9"></path></svg>
             </button>
 
@@ -141,6 +142,43 @@
                 <p id="stats" class="note fade-up d3"></p>
             </section>
 
+            <!-- Today: the daily cards -->
+            <section id="today" class="panel-main screen" hidden>
+                <p id="today-kicker" class="kicker"></p>
+                <h1 id="today-title" class="headline"></h1>
+                <p id="today-text" class="body-text"></p>
+                <div id="today-grid" class="grid"></div>
+                <div class="hub-actions">
+                    <button id="btn-today" class="btn btn-gold"></button>
+                </div>
+                <p id="today-note" class="note"></p>
+            </section>
+
+            <!-- Week: calendar, graph and stats for this week -->
+            <section id="week" class="panel-main screen" hidden>
+                <p id="week-kicker" class="kicker"></p>
+                <div class="week-total">
+                    <span id="week-pnl" class="headline"></span>
+                    <span id="week-balance" class="muted"></span>
+                </div>
+                <div id="week-days" class="week-days"></div>
+                <div id="week-chart" class="chart"></div>
+                <p id="week-note" class="note"></p>
+                <div id="week-stats" class="stats week-stats"></div>
+                <p id="week-compare" class="body-text"></p>
+                <div id="past-weeks" class="past-weeks"></div>
+            </section>
+
+            <!-- Practice: every card in one round -->
+            <section id="practice" class="panel-main screen" hidden>
+                <p class="kicker">Practice</p>
+                <h1 class="headline">Play every card</h1>
+                <p id="practice-text" class="body-text"></p>
+                <div class="hub-actions">
+                    <button id="btn-practice" class="btn btn-gold">Start practice</button>
+                </div>
+            </section>
+
             <!-- Shown if puzzles.json can't be loaded -->
             <section id="error" class="panel-main screen" hidden>
                 <h1 class="headline">Couldn't load the puzzles</h1>
@@ -186,6 +224,23 @@
                     <button id="btn-next" class="btn btn-gold">Next card</button>
                 </div>
             </div>
+
+            <nav id="tab-bar" class="step" hidden aria-label="Menu">
+                <div class="tab-row">
+                    <button id="tab-today" class="tab">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+                        Today
+                    </button>
+                    <button id="tab-week" class="tab">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
+                        Week
+                    </button>
+                    <button id="tab-practice" class="tab">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16M4 4h11l-2 4 2 4H4"></path></svg>
+                        Practice
+                    </button>
+                </div>
+            </nav>
 
             <div id="end-step" class="step" hidden>
                 <div class="btn-row">

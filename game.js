@@ -7,14 +7,19 @@
 
 // ---------- Settings ----------
 const BIG_MOVE = 5;              // a move of 5% or more counts as "big"
-const START_VALUE = 10000;       // every round starts with a $10,000 portfolio
+const START_VALUE = 10000;       // every week (and every practice round) starts with $10,000
 const STAKES = { low: 0.10, mid: 0.25, high: 0.50 };   // share of the portfolio you bet
 const HALF_WIN = 0.5;            // right direction, wrong size: win half your bet
 const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
+const DAILY_START = "2026-10-26";  // the Monday the first daily cards go live
+const CARDS_PER_DAY = 2;           // daily cards come from puzzles.json in order, 2 per weekday
 
 // ---------- Game state (the game's "memory") ----------
 let puzzles = [];            // every card from puzzles.json
-let cardIndex = 0;           // which card we're on (0 = first)
+let mode = "practice";       // "daily" (today's cards) or "practice" (every card)
+let deck = [];               // the cards in this round
+let dailyKey = null;         // the day being played in daily mode, e.g. "2026-10-26"
+let cardIndex = 0;           // which card of the deck we're on (0 = first)
 let pickedDir = null;        // "up" or "down"
 let pickedSize = null;       // "small" or "big"
 let portfolio = START_VALUE; // current portfolio value in dollars
@@ -30,6 +35,9 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
 // +1234 -> "+$1,234", -1234 -> "−$1,234"
 const signedMoney = (n) => (n >= 0 ? "+" : "−") + money(Math.abs(n));
+// Short version for the small day tiles: +8750 -> "+$8.8k", -703 -> "−$703"
+const compactMoney = (n) => (n >= 0 ? "+" : "−") +
+    (Math.abs(n) >= 1000 ? "$" + (Math.abs(n) / 1000).toFixed(1) + "k" : money(Math.abs(n)));
 
 
 // ---------- 1. Load the cards ----------
@@ -37,7 +45,6 @@ fetch("puzzles.json")
     .then(response => response.json())
     .then(data => {
         puzzles = data;
-        showStreak();
         showHome();
     })
     .catch(error => {
@@ -54,16 +61,19 @@ $("btn-start").addEventListener("click", () => {
     $("home").hidden = true;
     $("app").hidden = false;
     document.body.classList.add("in-game");   // dims the background line
-    startRound();
+    // Before the daily cards begin, Practice is the only thing to play
+    showHub(todayKey() < DAILY_START ? "practice" : "today");
 });
 
-$("btn-home").addEventListener("click", showHome);
+$("btn-home").addEventListener("click", () => showHub(mode === "practice" ? "practice" : "today"));
 
 function showHome() {
     $("app").hidden = true;
     $("home").hidden = false;
     document.body.classList.remove("in-game");
-    $("home-cards").textContent = `${puzzles.length} cards`;
+    $("home-cards").textContent = todayKey() < DAILY_START
+        ? `${puzzles.length} cards to practise`
+        : "2 new cards every weekday";
 
     const stats = loadStats();
     $("home-stats").textContent = stats.played > 0
@@ -195,13 +205,392 @@ function stopHomeChart() {
 }
 
 
-// ---------- 2. Round flow ----------
+// ---------- 2. Days and weeks ----------
+// Days are kept as "YYYY-MM-DD" text in the player's own time zone, which also sorts correctly.
+// Add ?day=2026-10-27 to the address to pretend it's another day (for testing).
+function todayKey() {
+    const override = new URLSearchParams(location.search).get("day");
+    if (override && /^\d{4}-\d{2}-\d{2}$/.test(override)) return override;
+    return dateKey(new Date());
+}
+
+function dateKey(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function parseKey(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function addDays(key, n) {
+    const d = parseKey(key);
+    d.setDate(d.getDate() + n);
+    return dateKey(d);
+}
+
+// The market is shut at weekends, so there are no cards on Saturday or Sunday
+function isWeekend(key) {
+    const day = parseKey(key).getDay();
+    return day === 0 || day === 6;
+}
+
+// The Monday of the week a day belongs to. Saturday and Sunday belong to the week just ended.
+function weekKey(key) {
+    const day = parseKey(key).getDay();
+    return addDays(key, -(day === 0 ? 6 : day - 1));
+}
+
+// How many weekdays there have been from DAILY_START up to (not including) this day
+function tradingDayIndex(key) {
+    let n = 0;
+    for (let k = DAILY_START; k < key; k = addDays(k, 1)) {
+        if (!isWeekend(k)) n++;
+    }
+    return n;
+}
+
+function todaysCards(key) {
+    if (key < DAILY_START || isWeekend(key)) return [];
+    const first = tradingDayIndex(key) * CARDS_PER_DAY;
+    return puzzles.slice(first, first + CARDS_PER_DAY);
+}
+
+// "Monday 26 October" and "26 Oct"
+const longDay = (key) => parseKey(key).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+const shortDay = (key) => parseKey(key).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+// This week's portfolio, saved in this browser:
+// { week: "2026-10-26", days: { "2026-10-26": { start: 10000, results: [...] } } }
+// When a new week begins, the old one is filed in the history and the portfolio resets.
+function loadWeek() {
+    const current = weekKey(todayKey());
+    let week = null;
+    try { week = JSON.parse(localStorage.getItem("pricedInWeek")); } catch (e) { /* start fresh */ }
+    if (!week || typeof week !== "object" || !week.days) week = { week: current, days: {} };
+    if (week.week !== current) {
+        if (playedDays(week).length) addToHistory(week);
+        week = { week: current, days: {} };
+        storeWeek(week);
+    }
+    return week;
+}
+
+function storeWeek(week) {
+    try { localStorage.setItem("pricedInWeek", JSON.stringify(week)); } catch (e) { /* progress just won't be saved */ }
+}
+
+// Days with at least one card played, in order
+function playedDays(week) {
+    return Object.keys(week.days).sort().filter(key => week.days[key].results.length > 0);
+}
+
+function dayEnd(day) {
+    return day.start + day.results.reduce((sum, r) => sum + r.pnl, 0);
+}
+
+// The portfolio right now: where the last played day finished, or $10,000 if nothing's been played
+function weekBalance(week) {
+    const days = playedDays(week);
+    return days.length ? dayEnd(week.days[days[days.length - 1]]) : START_VALUE;
+}
+
+function loadHistory() {
+    try {
+        const history = JSON.parse(localStorage.getItem("pricedInHistory"));
+        return Array.isArray(history) ? history : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function addToHistory(week) {
+    const history = loadHistory();
+    history.unshift({ week: week.week, end: weekBalance(week) });
+    try { localStorage.setItem("pricedInHistory", JSON.stringify(history.slice(0, 52))); } catch (e) { /* not saved */ }
+}
+
+
+// ---------- 3. The menu: Today, Week and Practice tabs ----------
+let currentTab = "today";
+
+$("tab-today").addEventListener("click", () => showHub("today"));
+$("tab-week").addEventListener("click", () => showHub("week"));
+$("tab-practice").addEventListener("click", () => showHub("practice"));
+
+function showHub(tab) {
+    currentTab = tab;
+    const key = todayKey();
+    const week = loadWeek();
+    const day = week.days[key];
+
+    // The top bar shows this week's portfolio and today's squares
+    mode = "daily";
+    deck = todaysCards(key);
+    results = day ? day.results.slice() : [];
+    cardIndex = results.length;
+    portfolio = weekBalance(week);
+    $("portfolio").textContent = money(portfolio);
+    showReturn();
+    showSquares();
+    $("progress").textContent = deck.length ? "Today" : isWeekend(key) ? "Market closed" : "No new cards";
+
+    // Show the screen first, so the week graph can measure its width
+    showOnly(tab);
+    showButtons("tab-bar");
+    if (tab === "today") showToday(key, week);
+    if (tab === "week") showWeek(key, week);
+    if (tab === "practice") showPractice();
+
+    ["today", "week", "practice"].forEach(name => {
+        $("tab-" + name).classList.toggle("active", name === tab);
+    });
+    restartAnimations($(tab));
+    window.scrollTo(0, 0);
+}
+
+function showToday(key, week) {
+    const cards = todaysCards(key);
+    const day = week.days[key];
+    const done = day ? day.results.length : 0;
+
+    $("today-kicker").textContent = longDay(key);
+    $("today-note").textContent = "";
+    $("today-grid").innerHTML = "";
+    if (done) buildGrid($("today-grid"), day.results);
+
+    let title, text, button;
+    if (key < DAILY_START) {
+        title = "Daily cards start soon";
+        text = `The first daily cards go live on ${longDay(DAILY_START)}. Until then, play every card in Practice.`;
+        button = "Go to Practice";
+    } else if (isWeekend(key)) {
+        title = "The market's closed";
+        text = "New cards on Monday. See how your week went in the Week tab.";
+        button = "See your week";
+    } else if (cards.length === 0) {
+        title = "New cards coming soon";
+        text = "You've reached the end of the cards for now. Try Practice, or check back tomorrow.";
+        button = "Go to Practice";
+    } else if (done === 0) {
+        title = cards.length === 1 ? "1 new card" : `${cards.length} new cards`;
+        text = `Your portfolio: ${money(portfolio)} (${weekReturnText()} this week). Read each card, make your calls and place your bets.`;
+        button = cards.length === 1 ? "Play today's card" : "Play today's cards";
+    } else if (done < cards.length) {
+        title = "Finish today's cards";
+        text = `${done} of ${cards.length} played. Your portfolio: ${money(portfolio)}.`;
+        button = "Continue";
+    } else {
+        const dayPnl = dayEnd(day) - day.start;
+        title = "Done for today";
+        text = `Today ${signedMoney(dayPnl)}. Your portfolio: ${money(portfolio)} (${weekReturnText()} this week).`;
+        button = "Share today";
+        $("today-note").textContent = nextCardsText(key);
+    }
+    $("today-title").textContent = title;
+    $("today-text").textContent = text;
+    $("btn-today").textContent = button;
+}
+
+$("btn-today").addEventListener("click", () => {
+    const label = $("btn-today").textContent;
+    if (label === "Go to Practice") showHub("practice");
+    else if (label === "See your week") showHub("week");
+    else if (label === "Share today" || label === "Copied!") shareDay();
+    else startDaily();
+});
+
+// "New cards tomorrow" or "New cards on Monday"
+function nextCardsText(key) {
+    let next = addDays(key, 1);
+    while (isWeekend(next)) next = addDays(next, 1);
+    return next === addDays(key, 1) ? "New cards tomorrow." : "New cards on Monday.";
+}
+
+function weekReturnText() {
+    const ret = roundReturn();
+    return (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
+}
+
+function showPractice() {
+    $("practice-text").textContent = `Play all ${puzzles.length} cards in one go, starting with $10,000. Practice doesn't touch your weekly portfolio.`;
+}
+
+$("btn-practice").addEventListener("click", startPractice);
+
+// The week: a tile per weekday, a graph of the portfolio, stats and past weeks
+function showWeek(key, week) {
+    const balance = weekBalance(week);
+    const pnl = balance - START_VALUE;
+    $("week-kicker").textContent = "Week of " + shortDay(week.week);
+    $("week-pnl").textContent = signedMoney(pnl);
+    $("week-pnl").className = "headline " + (pnl > 0 ? "is-up" : pnl < 0 ? "is-down" : "");
+    $("week-balance").textContent = `Portfolio ${money(balance)} · ${weekReturnText()}`;
+
+    // Monday to Friday tiles
+    const tiles = $("week-days");
+    tiles.innerHTML = "";
+    const names = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    names.forEach((name, i) => {
+        const dayKey = addDays(week.week, i);
+        const day = week.days[dayKey];
+        const played = day && day.results.length > 0;
+        const dayPnl = played ? dayEnd(day) - day.start : 0;
+
+        const tile = document.createElement("div");
+        tile.className = "day-tile" +
+            (played ? (dayPnl >= 0 ? " up" : " down") : "") +
+            (dayKey === key ? " today" : "") +
+            (dayKey > key ? " future" : "");
+        tile.appendChild(cell("span", `${name} ${parseKey(dayKey).getDate()}`, "day-name"));
+        tile.appendChild(cell("span", played ? compactMoney(dayPnl) : "—", "day-pnl"));
+        tile.appendChild(cell("span", played ? (day.results.length === 1 ? "1 card" : `${day.results.length} cards`) : "", "day-sub"));
+        tiles.appendChild(tile);
+    });
+
+    // The graph: $10,000 at the start, then the portfolio at the end of each weekday so far
+    const values = [START_VALUE];
+    const labels = ["Start"];
+    let value = START_VALUE;
+    names.forEach((name, i) => {
+        const dayKey = addDays(week.week, i);
+        if (dayKey > key) return;
+        const day = week.days[dayKey];
+        if (day && day.results.length) value = dayEnd(day);
+        values.push(value);
+        labels.push(name);
+    });
+    const days = playedDays(week);
+    if (days.length) {
+        drawWeekChart(values, labels);
+        $("week-note").textContent = "Your portfolio at the end of each day. It resets to $10,000 every Monday.";
+    } else {
+        $("week-chart").innerHTML = "";
+        $("week-note").textContent = "Play today's cards to start this week's graph. Your portfolio resets to $10,000 every Monday.";
+    }
+
+    // Stats over every card played this week
+    const all = days.flatMap(d => week.days[d].results);
+    const stats = $("week-stats");
+    stats.innerHTML = "";
+    $("week-compare").textContent = "";
+    if (all.length) {
+        const best = all.reduce((a, b) => (b.pnl > a.pnl ? b : a));
+        const worst = all.reduce((a, b) => (b.pnl < a.pnl ? b : a));
+        const biggest = all.reduce((a, b) => (b.stake > a.stake ? b : a));
+        addStat(stats, "Direction right", `${all.filter(r => r.dirRight).length} of ${all.length}`);
+        addStat(stats, "Size right", `${all.filter(r => r.sizeRight).length} of ${all.length}`);
+        addStat(stats, "Biggest bet", `${money(biggest.stake)} · ${biggest.company}`);
+        addStat(stats, "Best call", `${signedMoney(best.pnl)} · ${best.company}`, best.pnl >= 0 ? "is-up" : "is-down");
+        addStat(stats, worst.pnl >= 0 ? "Smallest win" : "Worst call", `${signedMoney(worst.pnl)} · ${worst.company}`, worst.pnl >= 0 ? "is-up" : "is-down");
+        $("week-compare").textContent = compareWithAlwaysBig(all, balance);
+    }
+
+    // Past weeks
+    const past = $("past-weeks");
+    past.innerHTML = "";
+    loadHistory().slice(0, 8).forEach(h => {
+        const ret = (h.end - START_VALUE) / START_VALUE * 100;
+        const row = document.createElement("div");
+        row.className = "past-row";
+        row.appendChild(cell("span", "Week of " + shortDay(h.week)));
+        row.appendChild(cell("span", money(h.end), "muted"));
+        row.appendChild(cell("span", (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%", "past-ret " + (ret >= 0 ? "is-up" : "is-down")));
+        past.appendChild(row);
+    });
+    if (past.children.length) past.prepend(cell("span", "Past weeks", "label"));
+}
+
+function addStat(box, label, value, className) {
+    const stat = document.createElement("div");
+    stat.className = "stat";
+    stat.appendChild(cell("span", label, "label"));
+    stat.appendChild(cell("span", value, "stat-value " + (className || "")));
+    box.appendChild(stat);
+}
+
+// Replay the week with the same directions and bets, but always calling Big.
+// It shows whether your size calls actually helped.
+function compareWithAlwaysBig(all, balance) {
+    if (all.some(r => typeof r.share !== "number")) return "";
+    let value = START_VALUE;
+    all.forEach(r => {
+        const stake = Math.round(value * r.share);
+        if (!r.dirRight) value -= stake;
+        else if (r.bigMove) value += stake;
+        else value += Math.round(stake * HALF_WIN);
+    });
+    const diff = Math.round(balance - value);
+    if (diff > 0) return `You beat "always pick Big" by ${money(diff)}.`;
+    if (diff < 0) return `"Always pick Big" would have made ${money(-diff)} more. Small moves happen too.`;
+    return `You finished level with "always pick Big".`;
+}
+
+// A small line chart of the portfolio over the week, with the $10,000 start as a dashed line
+function drawWeekChart(values, labels) {
+    const W = Math.max(260, Math.round($("week-chart").clientWidth || 340));
+    const H = 120;
+    const PAD = 14;
+    const isUp = values[values.length - 1] >= START_VALUE;
+    const colour = isUp ? "var(--up)" : "var(--down)";
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    const x = (i) => PAD + (i / Math.max(1, values.length - 1)) * (W - PAD * 2);
+    const y = (v) => H - PAD - ((v - min) / range) * (H - PAD * 2);
+
+    const points = values.map((v, i) => [x(i), y(v)]);
+    const linePath = values.length > 1 ? smoothPath(points) : "";
+    const startY = y(START_VALUE).toFixed(1);
+
+    // Only numbers and fixed day names go into this string
+    $("week-chart").innerHTML = `
+        <svg viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Portfolio over the week">
+            <line x1="${PAD}" y1="${startY}" x2="${W - PAD}" y2="${startY}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="3 4"></line>
+            <path d="${linePath}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+            ${points.map(([px, py]) => `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${colour}"></circle>`).join("")}
+            ${labels.map((label, i) => `<text x="${x(i).toFixed(1)}" y="${H + 14}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="11" text-anchor="middle">${label}</text>`).join("")}
+        </svg>`;
+}
+
+
+// ---------- 4. Round flow ----------
+function startPractice() {
+    mode = "practice";
+    deck = puzzles.slice();
+    dailyKey = null;
+    startRound();
+}
+
 function startRound() {
     cardIndex = 0;
     results = [];
     portfolio = START_VALUE;
     $("portfolio").textContent = money(portfolio);
     showReturn();
+    showCard();
+}
+
+// Play (or carry on with) today's cards. The portfolio picks up where this week left off.
+function startDaily() {
+    const key = todayKey();
+    const week = loadWeek();
+    if (!week.days[key]) {
+        week.days[key] = { start: weekBalance(week), results: [] };
+        storeWeek(week);
+    }
+    const day = week.days[key];
+
+    mode = "daily";
+    dailyKey = key;
+    deck = todaysCards(key);
+    results = day.results.slice();
+    cardIndex = results.length;
+    portfolio = dayEnd(day);
+    $("portfolio").textContent = money(portfolio);
+    showReturn();
+    if (cardIndex >= deck.length) { showHub("today"); return; }
     showCard();
 }
 
@@ -216,7 +605,7 @@ function showReturn() {
 function showSquares() {
     const box = $("squares");
     box.innerHTML = "";
-    puzzles.forEach((_, i) => {
+    deck.forEach((_, i) => {
         const sq = document.createElement("i");
         if (i < results.length) sq.className = results[i].pnl >= 0 ? "hit" : "miss";
         else if (i === cardIndex) sq.className = "now";
@@ -226,11 +615,11 @@ function showSquares() {
 
 // Show the current card and the Up/Down buttons
 function showCard() {
-    const puzzle = puzzles[cardIndex];
+    const puzzle = deck[cardIndex];
     pickedDir = null;
     pickedSize = null;
 
-    $("progress").textContent = `Card ${cardIndex + 1} of ${puzzles.length}`;
+    $("progress").textContent = `Card ${cardIndex + 1} of ${deck.length}`;
     $("when").textContent = puzzle.when;
     $("disguise").textContent = puzzle.disguise;
     $("mood").textContent = puzzle.mood;
@@ -308,7 +697,7 @@ function cell(tag, text, className) {
 }
 
 
-// ---------- 3. The player's three choices: direction, size, bet ----------
+// ---------- 5. The player's three choices: direction, size, bet ----------
 $("btn-up").addEventListener("click", () => pickDirection("up"));
 $("btn-down").addEventListener("click", () => pickDirection("down"));
 $("btn-small").addEventListener("click", () => pickSizeChoice("small"));
@@ -337,7 +726,7 @@ function pickSizeChoice(size) {
 }
 
 function placeBet(level) {
-    const puzzle = puzzles[cardIndex];
+    const puzzle = deck[cardIndex];
     const move = puzzle.answer.movePct;
     const actualSize = Math.abs(move) >= BIG_MOVE ? "big" : "small";
     const dirRight = pickedDir === puzzle.answer.direction;
@@ -353,12 +742,23 @@ function placeBet(level) {
     const before = portfolio;
     portfolio += pnl;
 
-    results.push({ dirRight, sizeRight, company: puzzle.company, pnl, stake, level });
+    const result = { id: puzzle.id, company: puzzle.company, dirRight, sizeRight, pnl, stake, share: STAKES[level], bigMove: actualSize === "big" };
+    results.push(result);
+
+    // Daily cards are saved straight away, so leaving halfway through loses nothing
+    if (mode === "daily") {
+        const week = loadWeek();
+        if (week.days[dailyKey]) {
+            week.days[dailyKey].results.push(result);
+            storeWeek(week);
+        }
+    }
+
     showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before);
 }
 
 
-// ---------- 4. The reveal ----------
+// ---------- 6. The reveal ----------
 function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before) {
     const move = puzzle.answer.movePct;
     const isUp = puzzle.answer.direction === "up";
@@ -397,8 +797,8 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before)
     flash(dirRight);
     if (!dirRight) replayAnimation($("verdict-dir").parentElement, "shake");
 
-    const lastCard = cardIndex === puzzles.length - 1;
-    $("btn-next").textContent = lastCard ? "See results" : "Next card";
+    const lastCard = cardIndex === deck.length - 1;
+    $("btn-next").textContent = !lastCard ? "Next card" : mode === "daily" ? "Finish today" : "See results";
     showButtons("next-step");
     window.scrollTo(0, 0);
 }
@@ -593,11 +993,14 @@ function flash(right) {
 }
 
 
-// ---------- 5. Next card / results ----------
+// ---------- 7. Next card / results ----------
 $("btn-next").addEventListener("click", () => {
-    if (cardIndex < puzzles.length - 1) {
+    if (cardIndex < deck.length - 1) {
         cardIndex++;
         showCard();
+    } else if (mode === "daily") {
+        saveStats(dailyKey);
+        showHub("today");
     } else {
         showResults();
     }
@@ -617,9 +1020,20 @@ function showResults() {
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
     $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret, results.filter(r => !r.dirRight).length)}`;
 
-    const grid = $("grid");
-    grid.innerHTML = "";
-    results.forEach(r => {
+    $("grid").innerHTML = "";
+    buildGrid($("grid"), results);
+
+    saveStats(null);
+    showOnly("results");
+    restartAnimations($("results"));
+    $("btn-share").textContent = "Share result";
+    showButtons("end-step");
+    window.scrollTo(0, 0);
+}
+
+// One row per card: two squares, the company and the profit or loss
+function buildGrid(grid, list) {
+    list.forEach(r => {
         const row = document.createElement("div");
         row.className = "grid-row";
         // Same colours as the HUD: wrong direction = red; right direction = green,
@@ -639,13 +1053,6 @@ function showResults() {
         row.appendChild(pnl);
         grid.appendChild(row);
     });
-
-    saveStats();
-    showOnly("results");
-    restartAnimations($("results"));
-    $("btn-share").textContent = "Share result";
-    showButtons("end-step");
-    window.scrollTo(0, 0);
 }
 
 function squareStates(r) {
@@ -664,25 +1071,41 @@ function scoreLine(ret, wrong) {
     return `${fooled} That's the point: good news isn't always good for the price.`;
 }
 
-$("btn-replay").addEventListener("click", startRound);
+$("btn-replay").addEventListener("click", startPractice);
 
-// Copy a spoiler-free result, Wordle-style
-$("btn-share").addEventListener("click", () => {
-    const ret = roundReturn();
-    const retText = (ret >= 0 ? "+" : "−") + Math.abs(ret).toFixed(1) + "%";
+// Spoiler-free squares, Wordle-style
+function shareSquares(list) {
     const emoji = { hit: "🟩", half: "⬜", miss: "🟥" };
-    const squares = results.map(r => squareStates(r).map(s => emoji[s]).join("")).join(" ");
-    const text = `Priced In: ${money(portfolio)} (${retText})\n${squares}\n${SITE_URL}`;
+    return list.map(r => squareStates(r).map(s => emoji[s]).join("")).join(" ");
+}
 
+$("btn-share").addEventListener("click", () => {
+    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n${SITE_URL}`;
+    share(text, $("btn-share"));
+});
+
+// e.g. "Priced In #3 · 28 Oct / 🟩🟩 🟩⬜ / Today +$1,250 · Week +12.5%"
+function shareDay() {
+    const key = todayKey();
+    const day = loadWeek().days[key];
+    if (!day) return;
+    const number = tradingDayIndex(key) + 1;
+    const text = `Priced In #${number} · ${shortDay(key)}\n${shareSquares(day.results)}\n` +
+        `Today ${signedMoney(dayEnd(day) - day.start)} · Week ${weekReturnText()}\n${SITE_URL}`;
+    share(text, $("btn-today"));
+}
+
+// Phones get the share sheet; computers copy to the clipboard
+function share(text, button) {
     if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) {
         navigator.share({ text }).catch(() => {});
     } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => { $("btn-share").textContent = "Copied!"; });
+        navigator.clipboard.writeText(text).then(() => { button.textContent = "Copied!"; }).catch(() => {});
     }
-});
+}
 
 
-// ---------- 6. Stats saved in this browser ----------
+// ---------- 8. Stats saved in this browser ----------
 // localStorage can fail (private browsing, blocked storage), so every use is wrapped in try/catch.
 function loadStats() {
     const blank = { played: 0, bestValue: 0, streak: 0, lastDay: null };
@@ -693,14 +1116,16 @@ function loadStats() {
     }
 }
 
-function saveStats() {
+// key is the day just finished in daily mode, or null for practice.
+// The streak counts daily cards finished on weekdays in a row; weekends don't break it.
+function saveStats(key) {
     const stats = loadStats();
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
 
-    if (stats.lastDay !== today) {
-        stats.streak = stats.lastDay === yesterday ? stats.streak + 1 : 1;
-        stats.lastDay = today;
+    if (key && stats.lastDay !== key) {
+        let previous = addDays(key, -1);
+        while (isWeekend(previous)) previous = addDays(previous, -1);
+        stats.streak = stats.lastDay === previous ? stats.streak + 1 : 1;
+        stats.lastDay = key;
     }
     stats.played += 1;
     stats.bestValue = Math.max(stats.bestValue, portfolio);
@@ -708,22 +1133,18 @@ function saveStats() {
     try { localStorage.setItem("pricedInStats", JSON.stringify(stats)); } catch (e) { /* stats just won't be saved */ }
 
     $("stats").textContent = `Rounds played: ${stats.played} · Best portfolio: ${money(stats.bestValue)} · Day streak: ${stats.streak}`;
-    showStreak();
 }
-
-// The streak now shows on the home screen (in showHome), so there's nothing to update here
-function showStreak() {}
 
 
 // ---------- Helpers ----------
 // Show one screen and hide the others
 function showOnly(screenId) {
-    ["card", "reveal", "results", "error"].forEach(id => { $(id).hidden = id !== screenId; });
+    ["card", "reveal", "results", "today", "week", "practice", "error"].forEach(id => { $(id).hidden = id !== screenId; });
 }
 
 // Show one group of buttons and hide the others
 function showButtons(groupId) {
-    ["dir-buttons", "size-buttons", "stake-buttons", "next-step", "end-step"].forEach(id => { $(id).hidden = id !== groupId; });
+    ["dir-buttons", "size-buttons", "stake-buttons", "next-step", "end-step", "tab-bar"].forEach(id => { $(id).hidden = id !== groupId; });
 }
 
 // Re-run a one-off animation on an element
