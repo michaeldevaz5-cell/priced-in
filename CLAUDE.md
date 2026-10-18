@@ -113,7 +113,7 @@ Before saying a change works:
 
 ## Current state (17 Oct 2026)
 
-- **Cards:** 8 so far, in `puzzles.json`:
+- **Cards:** 9 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -122,8 +122,9 @@ Before saying a change works:
   - Intel, Aug 2024: has `candles`; the first control card (bad news → down); `otherNews` and the first two sentences of `why` drafted by Claude at Michael's request (the second uses only facts from the CNBC source)
   - Alphabet, Oct 2024: has `candles`; small move (+2.8%) and a control (good news → up); `otherNews` drafted by Claude at Michael's request
   - Nvidia, Feb 2026: has `candles`; opened −0.7%, closed −5.5% (holding mattered); `otherNews` drafted by Claude, and unsourced claims in Michael's `mood`/`why` (production delays, shrinking margins, whisper numbers) swapped for sourced reasons at his request. Margins actually rose (75.0%, SEC filing).
+  - Meta, Feb 2024: has `candles`; second Meta card (disguised differently); opened +16.4%, closed +20.3%; `otherNews` drafted by Claude at Michael's request
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
 - **Friend test:** done 18 Oct 2026. Friends wanted to trade the reaction rather than call it, so the game switched to trading the same day. A minute-by-minute replay was considered but needs licensed intraday data; not planned.
-- **Daily mode built 17 Oct 2026:** 2 cards a weekday from Mon 26 Oct, weekly portfolio, Week tab, Practice. With 8 cards, daily cards fill Mon 26 – Thu 29 Oct; Fri 30 Oct needs 2 more (planned: Meta Feb 2024, Oracle Sep 2025), or Today says "New cards coming soon". Tomorrow's friend test uses Practice.
+- **Daily mode built 17 Oct 2026:** 2 cards a weekday from Mon 26 Oct, weekly portfolio, Week tab, Practice. With 8 cards, daily cards fill Mon 26 – Thu 29 Oct; Fri 30 Oct has Meta Feb 2024 and needs 1 more (planned: Oracle Sep 2025), or Today says "New cards coming soon". Tomorrow's friend test uses Practice.
