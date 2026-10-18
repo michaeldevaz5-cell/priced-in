@@ -15,7 +15,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 | 5 | Microsoft, Jan 2026 | To write |
 | 6 | Tesla, Apr 2024 | To write |
 | 7 | Oracle, Sep 2025 | To write |
-| 8 | Nvidia, Feb 2026 | To write |
+| 8 | Nvidia, Feb 2026 | ✅ In `puzzles.json`, with `candles` (opened −0.7%, closed −5.5%: $195.56 → $184.89) |
 | 9 | Meta, Feb 2024 (control) | To write |
 | 10 | Amazon, Feb 2024 (control) | To write |
 | 11 | Intel, Aug 2024 (control) | ✅ In `puzzles.json`, with `candles` (move −26.1%: $29.05 → $21.48) |
