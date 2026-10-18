@@ -115,7 +115,7 @@ Before saying a change works:
 
 - **Cards:** 7 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
-  - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude and Michael plans to rewrite them
+  - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
   - Palantir, Nov 2025: has `candles`; text fields drafted by Claude at Michael's request
   - Apple, Oct 2024: has `candles`; the first small move (−1.3%); `otherNews` drafted by Claude at Michael's request

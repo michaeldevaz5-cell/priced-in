@@ -402,7 +402,7 @@
         "otherNews": "It said it would cut more than 15% of its staff, stop paying its dividend and cut $10bn of costs. For next quarter it forecast a loss of 3 cents a share on $12.5–13.5bn of revenue, while analysts expected a 31-cent profit on $14.35bn.",
         "answer": { "direction": "down", "movePct": -26.1 },
         "company": "Intel",
-        "why": "The results missed, the forecast was far below expectations, and scrapping the dividend and cutting 15% of staff showed how deep the trouble ran. Investors worried because these expensive factories operated with massive unused capacity, which severely dragged down profitability and caused a negative free cash flow of billions. At the same time, the high upfront costs failed to generate immediate revenue because market demand had shifted largely toward the specialized AI infrastructure built by competitors.",
+        "why": "The results missed, the forecast was far below expectations, and scrapping the dividend and cutting 15% of staff showed how deep the trouble ran. Investors were worried because of low profitability and negative free cash flow due to massive unused capacity. There was also a lack of immediate revenue because high upfront costs failed to pay off yet.",
         "tag": "Bad news is bad news",
         "source": "https://www.cnbc.com/2024/08/01/intel-intc-q2-earnings-report-2024.html",
         "candles": [

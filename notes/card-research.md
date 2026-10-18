@@ -9,7 +9,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 | Card | Event | Status |
 |---|---|---|
 | 1 | Meta, Feb 2023 | ✅ In `puzzles.json`, with `candles` |
-| 2 | Netflix, Apr 2024 | ✅ In `puzzles.json`, with `candles` (text to be rewritten by Michael) |
+| 2 | Netflix, Apr 2024 | ✅ In `puzzles.json`, with `candles` (text drafted by Claude, kept by Michael) |
 | 3 | Nike, Jun 2025 | ✅ In `puzzles.json`, with `candles` (move +15.2%: $62.54 → $72.04) |
 | 4 | Palantir, Nov 2025 | ✅ In `puzzles.json`, with `candles` (move −7.9%: $207.18 → $190.74) |
 | 5 | Microsoft, Jan 2026 | To write |
