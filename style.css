@@ -453,6 +453,25 @@ code {
 .chart { position: relative; margin-top: -6px; }
 .chart svg { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; cursor: crosshair; }
 
+/* 2W / 1M / 3M zoom buttons above a chart */
+.chart-range { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: -8px; }
+
+.chart-range button {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.chart-range button:hover { color: var(--text); }
+.chart-range button.active { background: var(--raised); color: var(--gold); }
+.chart-range button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 /* The label that follows your finger or mouse along the chart */
 .chart-tip {
     position: absolute;

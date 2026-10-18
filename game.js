@@ -629,11 +629,11 @@ function showCard() {
     // The days before the results, without prices, so price levels can't give the company away
     if (puzzle.candles) {
         const before = puzzle.candles.slice(0, -1);
-        drawCandles("card-chart", before, {
-            axis: true, hover: true, beforeResults: true, percentBase: before[0][3],
+        showChart("card-chart", before, {
+            axis: true, hover: true, beforeResults: true, percent: true,
             entry: { index: before.length - 1, price: before[before.length - 1][3], label: "You trade here" }
         });
-        $("card-chart-note").textContent = `The ${before.length} trading days up to the results, as % change since the first day. Dollar prices are hidden so they can't give the company away. Hover or tap to see each day.`;
+        $("card-chart-note").textContent = "Daily candles up to the results, as % change since the first day shown. Dollar prices are hidden so they can't give the company away. Zoom with the buttons, hover or tap to see each day.";
     } else {
         $("card-chart").innerHTML = "";
         $("card-chart-note").textContent = "";
@@ -930,15 +930,70 @@ function drawChart(puzzle, result) {
     }
     const n = puzzle.candles.length;
     const traded = result && result.side !== "out";
-    drawCandles("chart", puzzle.candles, {
+    showChart("chart", puzzle.candles, {
         marker: n - 2, axis: true, hover: true, popLast: true,
         entry: traded ? { index: n - 2, price: puzzle.candles[n - 2][3], label: "Your entry" } : null,
         exit: traded ? { index: n - 1, price: result.exit === "open" ? puzzle.candles[n - 1][0] : puzzle.candles[n - 1][3] } : null
     });
     $("chart-note").textContent = traded
-        ? `The last ${n} trading days. The gold line is where you got in, the gold dot where you got out. Hover or tap to see each day's prices.`
-        : `The last ${n} trading days, with volume along the bottom. Hover or tap to see each day's prices.`;
+        ? "The gold line is where you got in, the gold dot where you got out. Zoom with the buttons, hover or tap to see each day's prices."
+        : "Daily candles with volume along the bottom. Zoom with the buttons, hover or tap to see each day's prices.";
 }
+
+// ---------- Zooming ----------
+// A zoomable chart remembers all its candles and how many days are showing.
+// The range buttons (2W / 1M / 3M) and a trackpad pinch change the number of days;
+// each new card starts zoomed right out.
+const chartViews = {};
+const MIN_DAYS = 8;
+
+function showChart(boxId, candles, opts) {
+    chartViews[boxId] = { candles, opts, days: candles.length };
+    renderChart(boxId);
+}
+
+function renderChart(boxId) {
+    const view = chartViews[boxId];
+    const total = view.candles.length;
+    const days = Math.max(Math.min(MIN_DAYS, total), Math.min(Math.round(view.days), total));
+    const offset = total - days;
+    // Markers are given as positions in the full list, so move them to the zoomed-in list
+    const move = (index) => (index != null && index - offset >= 0 ? index - offset : null);
+    const moveMark = (mark) => (mark && move(mark.index) != null ? { ...mark, index: move(mark.index) } : null);
+    const opts = {
+        ...view.opts,
+        marker: move(view.opts.marker),
+        entry: moveMark(view.opts.entry),
+        exit: moveMark(view.opts.exit),
+        percentBase: view.opts.percent ? view.candles[offset][3] : undefined
+    };
+    drawCandles(boxId, view.candles.slice(offset), opts);
+
+    // Light up the matching range button
+    document.querySelectorAll(`.chart-range[data-chart="${boxId}"] button`).forEach(b => {
+        const target = b.dataset.days === "all" ? total : Number(b.dataset.days);
+        b.classList.toggle("active", Math.min(target, total) === days);
+    });
+
+    // Pinch on a trackpad (the browser reports it as a wheel event with ctrlKey)
+    $(boxId).querySelector("svg").addEventListener("wheel", e => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        view.days = Math.max(MIN_DAYS, Math.min(total, days * (e.deltaY > 0 ? 1.12 : 0.89)));
+        renderChart(boxId);
+    }, { passive: false });
+}
+
+document.querySelectorAll(".chart-range button").forEach(button => {
+    button.addEventListener("click", () => {
+        const boxId = button.parentElement.dataset.chart;
+        const view = chartViews[boxId];
+        if (!view) return;
+        view.days = button.dataset.days === "all" ? view.candles.length : Number(button.dataset.days);
+        view.opts.popLast = false;   // don't replay the reveal animation on every zoom
+        renderChart(boxId);
+    });
+});
 
 // Draw daily candles as an SVG, trading-platform style: tightly packed candles,
 // faint gridlines, volume bars along the bottom and (optionally) a price scale.
@@ -1112,7 +1167,7 @@ function addChartHover(box, candles, x, opts) {
         const [o, , , c] = candles[i];
         tipDay.textContent = dayLabel(i);
         tipPrice.textContent = opts.percentBase
-            ? `${signedPct(pct(opts.percentBase, c))} since day 1`
+            ? `${signedPct(pct(opts.percentBase, c))} since first day shown`
             : `Open $${o.toFixed(2)} · Close $${c.toFixed(2)}`;
         if (i > 0) {
             const change = pct(candles[i - 1][3], c);
