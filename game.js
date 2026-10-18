@@ -352,18 +352,21 @@ function showToday(key, week) {
 
     $("today-kicker").textContent = longDay(key);
     $("today-note").textContent = "";
-    $("today-grid").innerHTML = "";
-    if (done) buildGrid($("today-grid"), day.results);
+    showTeasers(cards, day);
+    showWeekStrip(key, week);
 
     let title, text, button;
+    let countdown = null;   // [label, the day the next cards arrive]
     if (key < DAILY_START) {
         title = "Daily cards start soon";
-        text = `The first daily cards go live on ${longDay(DAILY_START)}. Until then, play every card in Practice.`;
+        text = "Two new cards every weekday, with a $10,000 portfolio that carries through the week. Until then, play every card in Practice.";
         button = "Go to Practice";
+        countdown = ["First cards in", DAILY_START];
     } else if (isWeekend(key)) {
         title = "The market's closed";
-        text = "New cards on Monday. See how your week went in the Week tab.";
+        text = "See how your week went in the Week tab.";
         button = "See your week";
+        countdown = ["Market opens in", nextWeekday(key)];
     } else if (cards.length === 0) {
         title = "New cards coming soon";
         text = "You've reached the end of the cards for now. Try Practice, or check back tomorrow.";
@@ -381,8 +384,9 @@ function showToday(key, week) {
         title = "Done for today";
         text = `Today ${signedMoney(dayPnl)}. Your portfolio: ${money(portfolio)} (${weekReturnText()} this week).`;
         button = "Share today";
-        $("today-note").textContent = nextCardsText(key);
+        countdown = ["Next cards in", nextWeekday(key)];
     }
+    startCountdown(countdown);
     $("today-title").textContent = title;
     $("today-text").textContent = text;
     $("btn-today").textContent = button;
@@ -396,11 +400,90 @@ $("btn-today").addEventListener("click", () => {
     else startDaily();
 });
 
-// "New cards tomorrow" or "New cards on Monday"
-function nextCardsText(key) {
+function nextWeekday(key) {
     let next = addDays(key, 1);
     while (isWeekend(next)) next = addDays(next, 1);
-    return next === addDays(key, 1) ? "New cards tomorrow." : "New cards on Monday.";
+    return next;
+}
+
+// A live countdown to midnight at the start of the given day, in chunky tiles.
+// With ?day= in the address, the clock pretends to be on that day.
+let countdownTimer = null;
+
+function startCountdown(countdown) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    $("today-countdown").hidden = !countdown;
+    if (!countdown) return;
+
+    const [label, targetKey] = countdown;
+    $("countdown-label").textContent = label;
+    const target = parseKey(targetKey).getTime();
+
+    function tick() {
+        const now = new Date();
+        const today = parseKey(todayKey());
+        today.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+        let left = Math.max(0, Math.floor((target - today.getTime()) / 1000));
+        const parts = [["days", Math.floor(left / 86400)], ["hrs", Math.floor(left / 3600) % 24], ["min", Math.floor(left / 60) % 60], ["sec", left % 60]];
+        const tiles = $("countdown-tiles");
+        tiles.innerHTML = "";
+        parts.forEach(([name, value], i) => {
+            if (i === 0 && value === 0) return;   // no "0 days"
+            const tile = document.createElement("div");
+            tile.className = "count-tile";
+            tile.appendChild(cell("strong", String(value).padStart(2, "0")));
+            tile.appendChild(cell("span", name));
+            tiles.appendChild(tile);
+        });
+    }
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+}
+
+// Today's cards as small teasers: card number, month and disguise, ticked off once played
+function showTeasers(cards, day) {
+    const box = $("today-grid");
+    box.innerHTML = "";
+    cards.forEach((card, i) => {
+        const result = day && day.results[i];
+        const row = document.createElement("div");
+        row.className = "teaser" + (result ? " played" : "");
+        const text = document.createElement("div");
+        text.className = "teaser-text";
+        text.appendChild(cell("span", `Card ${i + 1} · ${card.when}`, "label"));
+        text.appendChild(cell("strong", result ? card.company : card.disguise));
+        row.appendChild(text);
+        if (result) {
+            const squares = document.createElement("div");
+            squares.className = "grid-row";
+            squareStates(result).forEach(state => squares.appendChild(cell("div", "", "sq " + state)));
+            row.appendChild(squares);
+            row.appendChild(cell("span", signedMoney(result.pnl), "grid-pnl " + (result.pnl > 0 ? "is-up" : result.pnl < 0 ? "is-down" : "")));
+        }
+        box.appendChild(row);
+    });
+}
+
+// Mon–Fri mini tiles for this week (or the first week, before the daily cards start)
+function showWeekStrip(key, week) {
+    const strip = $("today-week");
+    strip.innerHTML = "";
+    const monday = key < DAILY_START ? DAILY_START : weekKey(key);
+    ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach((name, i) => {
+        const dayKey = addDays(monday, i);
+        const day = week.week === monday ? week.days[dayKey] : null;
+        const played = day && day.results.length > 0;
+        const dayPnl = played ? dayEnd(day) - day.start : 0;
+        const locked = dayKey > key;
+        const tile = document.createElement("div");
+        tile.className = "day-tile" + (played ? (dayPnl >= 0 ? " up" : " down") : "") +
+            (dayKey === key ? " today" : "") + (locked ? " locked" : "");
+        tile.appendChild(cell("span", `${name} ${parseKey(dayKey).getDate()}`, "day-name"));
+        tile.appendChild(cell("span", played ? compactMoney(dayPnl) : locked ? "🔒" : "—", "day-pnl"));
+        tile.appendChild(cell("span", todaysCards(dayKey).length ? `${todaysCards(dayKey).length} cards` : "", "day-sub"));
+        strip.appendChild(tile);
+    });
 }
 
 function weekReturnText() {
@@ -1396,6 +1479,7 @@ function saveStats(key) {
 // Show one screen and hide the others
 function showOnly(screenId) {
     ["card", "open", "reveal", "results", "today", "week", "practice", "error"].forEach(id => { $(id).hidden = id !== screenId; });
+    if (screenId !== "today") { clearInterval(countdownTimer); countdownTimer = null; }
 }
 
 // Show one group of buttons and hide the others

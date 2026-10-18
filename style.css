@@ -589,6 +589,50 @@ code {
 .past-row { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
 .past-ret { margin-left: auto; font-weight: 700; }
 
+/* Today: countdown, card teasers and the week strip */
+.countdown { display: flex; flex-direction: column; gap: 8px; }
+
+.countdown-tiles { display: flex; gap: 8px; }
+
+.count-tile {
+    flex: 1 1 0;
+    max-width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 0 8px;
+    border-radius: 14px;
+    background: var(--raised);
+    box-shadow: 0 4px 0 var(--edge);
+}
+
+.count-tile strong { font-size: 30px; font-weight: 800; color: var(--gold); line-height: 1; }
+.count-tile span { font-size: 11px; font-weight: 600; color: var(--muted); }
+
+.teasers { display: flex; flex-direction: column; gap: 8px; }
+.teasers:empty { display: none; }
+
+.teaser {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--raised);
+    border-left: 4px solid var(--gold);
+}
+
+.teaser.played { border-left-color: var(--border); }
+.teaser-text { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+.teaser-text strong { font-size: 16px; font-weight: 700; }
+.teaser .grid-row .sq { width: 18px; height: 18px; border-radius: 5px; }
+.teaser .grid-row .sq:not(.hit):not(.miss) { background: var(--bg); }   /* grey squares show against the teaser */
+.teaser .grid-pnl { margin-left: 0; }
+
+.week-strip .day-tile { min-height: 64px; }
+.day-tile.locked { opacity: 0.6; }
+
 /* The tab bar at the bottom of the menu */
 .tab-row { display: flex; gap: 8px; }
 
