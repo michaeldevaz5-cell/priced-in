@@ -209,7 +209,7 @@ function startHomeChart() {
     function draw(now) {
         const dt = Math.min(64, now - last);
         last = now;
-        offset += dt * 0.012;   // the sky chart drifts slowly to the left
+        offset += dt * 0.01;    // the sky chart drifts slowly to the left
         while (offset >= CW + GAP) {
             offset -= CW + GAP;
             candles.shift();
@@ -223,10 +223,16 @@ function startHomeChart() {
             ctx.fillRect(st.x, st.y, 2, 2);
         });
 
+        // Heights stay on the pixel grid, but the sideways drift is smooth (no snapping),
+        // and candles fade in at the right edge and out at the left
         const snap = (v) => Math.round(v / PX) * PX;
+        const edge = w * 0.18;
         candles.forEach((c, i) => {
-            const x = snap(i * (CW + GAP) - offset);
-            ctx.fillStyle = c.close <= c.open ? "rgba(76, 195, 138, 0.13)" : "rgba(242, 109, 109, 0.13)";
+            const x = i * (CW + GAP) - offset;
+            const fade = Math.max(0, Math.min(1, (x + CW) / edge, (w - x) / edge));
+            if (fade === 0) return;
+            const alpha = (0.13 * fade).toFixed(3);
+            ctx.fillStyle = c.close <= c.open ? `rgba(76, 195, 138, ${alpha})` : `rgba(242, 109, 109, ${alpha})`;
             ctx.fillRect(x + CW / 2 - 1, snap(c.high), PX - 1, snap(c.low) - snap(c.high));
             ctx.fillRect(x, snap(Math.min(c.open, c.close)), CW, Math.max(PX, snap(Math.abs(c.close - c.open))));
         });
