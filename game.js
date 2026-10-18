@@ -965,9 +965,13 @@ function renderChart(boxId) {
         marker: move(view.opts.marker),
         entry: moveMark(view.opts.entry),
         exit: moveMark(view.opts.exit),
-        percentBase: view.opts.percent ? view.candles[offset][3] : undefined
+        percentBase: view.opts.percent ? view.candles[offset][3] : undefined,
+        // The pop-in animation plays only the first time. Zooming redraws the chart,
+        // and replaying it would hide the last candle for a moment on every zoom.
+        popLast: view.opts.popLast && !view.drawn
     };
     drawCandles(boxId, view.candles.slice(offset), opts);
+    view.drawn = true;
 
     // Light up the matching range button
     document.querySelectorAll(`.chart-range[data-chart="${boxId}"] button`).forEach(b => {
@@ -990,7 +994,6 @@ document.querySelectorAll(".chart-range button").forEach(button => {
         const view = chartViews[boxId];
         if (!view) return;
         view.days = button.dataset.days === "all" ? view.candles.length : Number(button.dataset.days);
-        view.opts.popLast = false;   // don't replay the reveal animation on every zoom
         renderChart(boxId);
     });
 });
@@ -1003,7 +1006,7 @@ document.querySelectorAll(".chart-range button").forEach(button => {
 // axis = show a scale on the right, hover = show each day's numbers on hover,
 // percentBase = show % change from this price instead of dollars (used before the reveal,
 // so price levels can't give the company away), beforeResults = the last candle is results day,
-// popLast = animate the last candle in.
+// popLast = animate the last candle and the exit dot in.
 // entry = { index, price, label }: a gold dashed line where the trade starts.
 // exit = { index, price }: a gold dot where the trade ended.
 function drawCandles(boxId, candles, opts) {
@@ -1100,7 +1103,7 @@ function drawCandles(boxId, candles, opts) {
     }
     // Where the trade ended
     if (opts.exit) {
-        parts += `<circle class="dot-pop" cx="${f(x(opts.exit.index))}" cy="${f(y(opts.exit.price))}" r="5" fill="var(--gold)" stroke="var(--bg)" stroke-width="2"></circle>`;
+        parts += `<circle${opts.popLast ? ' class="dot-pop"' : ""} cx="${f(x(opts.exit.index))}" cy="${f(y(opts.exit.price))}" r="5" fill="var(--gold)" stroke="var(--bg)" stroke-width="2"></circle>`;
     }
 
     // The last price, tagged on the scale like a trading platform
