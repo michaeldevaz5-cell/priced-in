@@ -119,7 +119,7 @@ Before saying a change works:
   - Nike, Jun 2025: has `candles`
   - Palantir, Nov 2025: has `candles`; text fields drafted by Claude at Michael's request
   - Apple, Oct 2024: has `candles`; the first small move (−1.3%); `otherNews` drafted by Claude at Michael's request
-  - Intel, Aug 2024: has `candles`; the first control card (bad news → down); `otherNews` and the first sentence of `why` drafted by Claude at Michael's request
+  - Intel, Aug 2024: has `candles`; the first control card (bad news → down); `otherNews` and the first two sentences of `why` drafted by Claude at Michael's request (the second uses only facts from the CNBC source)
   - Alphabet, Oct 2024: has `candles`; small move (+2.8%) and a control (good news → up); `otherNews` drafted by Claude at Michael's request
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
