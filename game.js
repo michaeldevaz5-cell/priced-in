@@ -628,8 +628,9 @@ function showCard() {
     showOnly("card");
     // The days before the results, without prices, so price levels can't give the company away
     if (puzzle.candles) {
-        drawCandles("card-chart", puzzle.candles.slice(0, -1), {});
-        $("card-chart-note").textContent = `The ${puzzle.candles.length - 1} trading days up to the results, with volume along the bottom. Prices are hidden so they can't give the company away.`;
+        const before = puzzle.candles.slice(0, -1);
+        drawCandles("card-chart", before, { axis: true, hover: true, beforeResults: true, percentBase: before[0][3] });
+        $("card-chart-note").textContent = `The ${before.length} trading days up to the results, as % change since the first day. Dollar prices are hidden so they can't give the company away. Hover or tap to see each day.`;
     } else {
         $("card-chart").innerHTML = "";
         $("card-chart-note").textContent = "";
@@ -929,8 +930,10 @@ function drawChart(puzzle) {
 // Each candle is [open, high, low, close, volume]. Green when it closed above its open, red when below.
 // Options: marker = index of results day (a dashed line after it),
 // openOnlyLast = draw the last day as just its opening price,
-// axis = show the price scale (only on the reveal, so prices can't give the company away),
-// hover = show real prices on hover, popLast = animate the last candle in.
+// axis = show a scale on the right, hover = show each day's numbers on hover,
+// percentBase = show % change from this price instead of dollars (used before the reveal,
+// so price levels can't give the company away), beforeResults = the last candle is results day,
+// popLast = animate the last candle in.
 function drawCandles(boxId, candles, opts) {
     const box = $(boxId);
     const W = Math.max(260, Math.round(box.clientWidth || 340));
@@ -962,12 +965,17 @@ function drawCandles(boxId, candles, opts) {
     // Only numbers go into this string, never text from the cards
     let parts = "";
 
-    // Gridlines at round prices, labelled on the right when the scale is shown
-    const step = niceStep((hi - lo) / 4);
-    for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
-        parts += `<line x1="0" y1="${f(y(v))}" x2="${plotW}" y2="${f(y(v))}" stroke="var(--border-soft)" stroke-width="1"></line>`;
+    // Gridlines at round prices (or round percentages), labelled on the right when the scale is shown
+    const base = opts.percentBase;
+    const toUnit = (v) => (base ? (v / base - 1) * 100 : v);
+    const fromUnit = (u) => (base ? base * (1 + u / 100) : u);
+    const step = niceStep((toUnit(hi) - toUnit(lo)) / 4);
+    const label = (u) => (base ? (u > 0 ? "+" : u < 0 ? "−" : "") + Math.abs(u).toFixed(step < 1 ? 1 : 0) + "%" : u.toFixed(step < 1 ? 2 : 0));
+    for (let u = Math.ceil(toUnit(lo) / step) * step; u <= toUnit(hi); u += step) {
+        const gy = f(y(fromUnit(u)));
+        parts += `<line x1="0" y1="${gy}" x2="${plotW}" y2="${gy}" stroke="var(--border-soft)" stroke-width="1"></line>`;
         if (opts.axis) {
-            parts += `<text x="${W - 4}" y="${f(y(v) + 4)}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="10" text-anchor="end">${v.toFixed(step < 1 ? 2 : 0)}</text>`;
+            parts += `<text x="${W - 4}" y="${f(y(fromUnit(u)) + 4)}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="10" text-anchor="end">${label(Math.round(u * 100) / 100)}</text>`;
         }
     }
     parts += `<line x1="0" y1="${PRICE_BOTTOM}" x2="${plotW}" y2="${PRICE_BOTTOM}" stroke="var(--border)" stroke-width="1"></line>`;
@@ -1003,7 +1011,7 @@ function drawCandles(boxId, candles, opts) {
         const last = candles[n - 1];
         const colour = last[3] >= candles[n - 2][3] ? "var(--up)" : "var(--down)";
         parts += `<rect x="${plotW + 2}" y="${f(y(last[3]) - 8)}" width="${AXIS - 2}" height="16" rx="3" fill="${colour}"></rect>
-            <text x="${W - 4}" y="${f(y(last[3]) + 4)}" fill="var(--bg)" font-family="Rubik, sans-serif" font-size="10" font-weight="700" text-anchor="end">${last[3].toFixed(2)}</text>`;
+            <text x="${W - 4}" y="${f(y(last[3]) + 4)}" fill="var(--bg)" font-family="Rubik, sans-serif" font-size="10" font-weight="700" text-anchor="end">${base ? signedPct(pct(base, last[3])) : last[3].toFixed(2)}</text>`;
     }
 
     if (opts.hover) {
@@ -1011,7 +1019,7 @@ function drawCandles(boxId, candles, opts) {
     }
 
     box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily price candles">${parts}</svg>`;
-    if (opts.hover) addChartHover(box, candles, x);
+    if (opts.hover) addChartHover(box, candles, x, opts);
 }
 
 // A round gap between gridlines: 1, 2, 2.5 or 5 times a power of ten
@@ -1022,7 +1030,8 @@ function niceStep(rough) {
 }
 
 // Hover (or tap and drag on a phone) along the chart to see each day's prices
-function addChartHover(box, candles, x) {
+// With opts.percentBase it shows % changes only, never dollar prices.
+function addChartHover(box, candles, x, opts) {
     const svg = box.querySelector("svg");
     const line = svg.querySelector(".hover-line");
     const last = candles.length - 1;
@@ -1036,10 +1045,11 @@ function addChartHover(box, candles, x) {
     tip.append(tipDay, tipPrice, tipChange);
     box.appendChild(tip);
 
+    const resultsIndex = opts.beforeResults ? last : last - 1;
     function dayLabel(i) {
-        if (i === last) return "Day after results";
-        if (i === last - 1) return "Results day";
-        const n = last - 1 - i;
+        if (i > resultsIndex) return "Day after results";
+        if (i === resultsIndex) return "Results day";
+        const n = resultsIndex - i;
         return n === 1 ? "1 trading day before" : n + " trading days before";
     }
 
@@ -1059,7 +1069,9 @@ function addChartHover(box, candles, x) {
 
         const [o, , , c] = candles[i];
         tipDay.textContent = dayLabel(i);
-        tipPrice.textContent = `Open $${o.toFixed(2)} · Close $${c.toFixed(2)}`;
+        tipPrice.textContent = opts.percentBase
+            ? `${signedPct(pct(opts.percentBase, c))} since day 1`
+            : `Open $${o.toFixed(2)} · Close $${c.toFixed(2)}`;
         if (i > 0) {
             const change = pct(candles[i - 1][3], c);
             tipChange.textContent = signedPct(change);
