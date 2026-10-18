@@ -629,7 +629,10 @@ function showCard() {
     // The days before the results, without prices, so price levels can't give the company away
     if (puzzle.candles) {
         const before = puzzle.candles.slice(0, -1);
-        drawCandles("card-chart", before, { axis: true, hover: true, beforeResults: true, percentBase: before[0][3] });
+        drawCandles("card-chart", before, {
+            axis: true, hover: true, beforeResults: true, percentBase: before[0][3],
+            entry: { index: before.length - 1, price: before[before.length - 1][3], label: "You trade here" }
+        });
         $("card-chart-note").textContent = `The ${before.length} trading days up to the results, as % change since the first day. Dollar prices are hidden so they can't give the company away. Hover or tap to see each day.`;
     } else {
         $("card-chart").innerHTML = "";
@@ -782,7 +785,11 @@ function showOpen() {
 
     showOnly("open");
     if (puzzle.candles) {
-        drawCandles("open-chart", puzzle.candles, { openOnlyLast: true, marker: puzzle.candles.length - 2 });
+        const n = puzzle.candles.length;
+        drawCandles("open-chart", puzzle.candles, {
+            openOnlyLast: true, marker: n - 2,
+            entry: { index: n - 2, price: puzzle.candles[n - 2][3], label: "Your entry" }
+        });
     }
     showButtons("exit-buttons");
     replayAnimation($("open"), "enter");
@@ -880,7 +887,7 @@ function showReveal(puzzle, result, before) {
     animateNumber($("portfolio"), before, portfolio, v => money(v), 1500);
 
     showOnly("reveal");
-    drawChart(puzzle);           // drawn after the panel is visible, so it can measure its width
+    drawChart(puzzle, result);   // drawn after the panel is visible, so it can measure its width
     restartAnimations($("reveal"));
     if (result.pnl !== 0) flash(result.pnl > 0);
     if (result.pnl < 0) replayAnimation($("pnl").parentElement, "shake");
@@ -915,14 +922,22 @@ function animateNumber(el, from, to, format, delay) {
 }
 
 // The reveal chart: every candle, with hover for the real prices
-function drawChart(puzzle) {
+function drawChart(puzzle, result) {
     if (!puzzle.candles) {
         $("chart").innerHTML = "";
         $("chart-note").textContent = "";
         return;
     }
-    drawCandles("chart", puzzle.candles, { marker: puzzle.candles.length - 2, axis: true, hover: true, popLast: true });
-    $("chart-note").textContent = `The last ${puzzle.candles.length} trading days, with volume along the bottom. Hover or tap to see each day's prices.`;
+    const n = puzzle.candles.length;
+    const traded = result && result.side !== "out";
+    drawCandles("chart", puzzle.candles, {
+        marker: n - 2, axis: true, hover: true, popLast: true,
+        entry: traded ? { index: n - 2, price: puzzle.candles[n - 2][3], label: "Your entry" } : null,
+        exit: traded ? { index: n - 1, price: result.exit === "open" ? puzzle.candles[n - 1][0] : puzzle.candles[n - 1][3] } : null
+    });
+    $("chart-note").textContent = traded
+        ? `The last ${n} trading days. The gold line is where you got in, the gold dot where you got out. Hover or tap to see each day's prices.`
+        : `The last ${n} trading days, with volume along the bottom. Hover or tap to see each day's prices.`;
 }
 
 // Draw daily candles as an SVG, trading-platform style: tightly packed candles,
@@ -934,6 +949,8 @@ function drawChart(puzzle) {
 // percentBase = show % change from this price instead of dollars (used before the reveal,
 // so price levels can't give the company away), beforeResults = the last candle is results day,
 // popLast = animate the last candle in.
+// entry = { index, price, label }: a gold dashed line where the trade starts.
+// exit = { index, price }: a gold dot where the trade ended.
 function drawCandles(boxId, candles, opts) {
     const box = $(boxId);
     const W = Math.max(260, Math.round(box.clientWidth || 340));
@@ -1005,6 +1022,19 @@ function drawCandles(boxId, candles, opts) {
             <line x1="${f(x(i))}" y1="${f(y(h))}" x2="${f(x(i))}" y2="${f(y(l))}" stroke="${colour}" stroke-width="1"></line>
             <rect x="${f(x(i) - body / 2)}" y="${f(top)}" width="${f(body)}" height="${f(height)}" fill="${colour}"></rect></g>`;
     });
+
+    // Where the trade starts: a gold dashed line from the entry candle to the right edge
+    if (opts.entry) {
+        const ey = f(y(opts.entry.price));
+        const ex = f(x(opts.entry.index));
+        parts += `<line x1="${ex}" y1="${ey}" x2="${plotW}" y2="${ey}" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="4 3"></line>
+            <circle cx="${ex}" cy="${ey}" r="3.5" fill="var(--gold)"></circle>
+            <text x="${f(x(opts.entry.index) - 8)}" y="${f(y(opts.entry.price) + 4)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="end">${opts.entry.label}</text>`;
+    }
+    // Where the trade ended
+    if (opts.exit) {
+        parts += `<circle class="dot-pop" cx="${f(x(opts.exit.index))}" cy="${f(y(opts.exit.price))}" r="5" fill="var(--gold)" stroke="var(--bg)" stroke-width="2"></circle>`;
+    }
 
     // The last price, tagged on the scale like a trading platform
     if (opts.axis) {
