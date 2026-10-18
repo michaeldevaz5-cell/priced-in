@@ -56,7 +56,7 @@ fetch("puzzles.json")
 $("btn-start").addEventListener("click", () => {
     $("home").hidden = true;
     $("app").hidden = false;
-    document.body.classList.add("in-game");   // dims the background line
+    document.body.classList.add("in-game");   // dims the background scene
     // Before the daily cards begin, Practice is the only thing to play
     showHub(todayKey() < DAILY_START ? "practice" : "today");
 });
@@ -105,85 +105,147 @@ function buildTape() {
     }
 }
 
-// Background price line that keeps drawing itself across the home screen.
-// It's a random walk, purely decorative.
+// The background scene: a city at night, like Wall Street after the closing bell.
+// A pixel-art skyline along the bottom (lit windows that flicker, blinking red lights
+// on the antennas) and a giant, faint candlestick chart drifting across the sky.
+// The candles are a random walk, purely decorative, not real prices.
 let homeChartFrame = null;
 
 function startHomeChart() {
     const canvas = $("bg-chart");
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-    const step = 6;                 // pixels between points
-    let points = [];
+    const PX = 3;                     // one "pixel" of pixel art, in screen pixels
+    let w = 0, h = 0;
+    let skyline = null;               // the buildings, drawn once onto their own canvas
+    let windows = [];                 // lit windows that can flicker
+    let lights = [];                  // red antenna lights
+    let stars = [];
+    let candles = [];
     let offset = 0;
     let last = performance.now();
 
-    function resize() {
-        canvas.width = canvas.clientWidth * dpr;
-        canvas.height = canvas.clientHeight * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        const count = Math.ceil(canvas.clientWidth / step) + 3;
-        if (points.length === 0) {
-            const [lo, hi] = band();
-            let v = (lo + hi) / 2;
-            for (let i = 0; i < count; i++) { v = nextValue(v); points.push(v); }
+    // The same "random" city every time, so it doesn't jump about on resize
+    function seeded(seed) {
+        return () => {
+            seed = (seed + 0x6D2B79F5) | 0;
+            let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function buildCity() {
+        const rand = seeded(7);
+        skyline = document.createElement("canvas");
+        skyline.width = w * dpr;
+        skyline.height = h * dpr;
+        const s = skyline.getContext("2d");
+        s.setTransform(dpr, 0, 0, dpr, 0, 0);
+        windows = [];
+        lights = [];
+
+        // Two rows of buildings: a dim one behind, a darker one in front
+        [["#151b2b", 0.30, 0.6], ["#0b0f18", 0.20, 1]].forEach(([colour, tallest, lit]) => {
+            let x = -PX * 4;
+            while (x < w) {
+                const bw = PX * (8 + Math.floor(rand() * 14));
+                const bh = Math.round(h * (0.06 + rand() * tallest) / PX) * PX;
+                const top = h - bh;
+                s.fillStyle = colour;
+                s.fillRect(x, top, bw, bh);
+                // A stepped roof or an antenna on some of them
+                if (rand() < 0.35) s.fillRect(x + PX * 2, top - PX * 3, bw - PX * 4, PX * 3);
+                if (rand() < 0.25 && bh > h * 0.18) {
+                    const ax = x + Math.floor(bw / 2 / PX) * PX;
+                    s.fillRect(ax, top - PX * 12, PX, PX * 12);
+                    if (lit === 1) lights.push({ x: ax, y: top - PX * 13, phase: rand() * 6 });
+                }
+                // Windows in a grid, some lit gold
+                for (let wy = top + PX * 3; wy < h - PX * 3; wy += PX * 3) {
+                    for (let wx = x + PX * 2; wx < x + bw - PX * 2; wx += PX * 3) {
+                        if (rand() < 0.16 * lit) {
+                            const win = { x: wx, y: wy, on: true, flicker: rand() < 0.08 };
+                            if (win.flicker) windows.push(win);
+                            else {
+                                s.fillStyle = rand() < 0.8 ? "rgba(245, 196, 81, 0.55)" : "rgba(242, 244, 247, 0.35)";
+                                s.fillRect(wx, wy, PX, PX);
+                            }
+                        }
+                    }
+                }
+                x += bw + PX * Math.floor(rand() * 3);
+            }
+        });
+
+        stars = [];
+        for (let i = 0; i < 60; i++) {
+            stars.push({ x: Math.floor(rand() * w / PX) * PX, y: Math.floor(rand() * h * 0.5 / PX) * PX, phase: rand() * 6 });
         }
-        while (points.length < count) points.push(nextValue(points[points.length - 1]));
     }
 
-    // The strip of screen the line is allowed to use. On the home screen it stays
-    // below the title and button so it never runs through the text.
-    function band() {
-        const h = canvas.clientHeight;
-        if ($("home").hidden) return [h * 0.3, h * 0.92];
-        const contentBottom = document.querySelector(".home-inner").getBoundingClientRect().bottom - 48;
-        const lo = Math.min(contentBottom + 32, h - 70);
-        return [lo, h - 16];
+    // The sky chart: wide, faint candles in the top half of the screen
+    const CW = PX * 4, GAP = PX * 3;
+    function nextCandle(prev) {
+        const open = prev ? prev.close : h * 0.32;
+        let close = open + (Math.random() - 0.5) * h * 0.06;
+        close += (h * 0.32 - close) * 0.08;   // drift back towards the middle of the sky
+        const high = Math.min(open, close) - Math.random() * h * 0.025;
+        const low = Math.max(open, close) + Math.random() * h * 0.025;
+        return { open, close, high, low };
     }
 
-    // Each new price drifts with noise, pulled towards the middle of the band.
-    // If the band moves, the line glides into it rather than jumping.
-    function nextValue(v) {
-        const [lo, hi] = band();
-        const noise = (Math.random() - 0.5) * Math.min(14, (hi - lo) / 5);
-        const pull = ((lo + hi) / 2 - v) * 0.03;
-        const target = Math.min(hi, Math.max(lo, v - 0.35 + pull + noise));
-        return v + Math.max(-4, Math.min(4, target - v));
+    function resize() {
+        w = canvas.clientWidth;
+        h = canvas.clientHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        buildCity();
+        const count = Math.ceil(w / (CW + GAP)) + 3;
+        while (candles.length < count) candles.push(nextCandle(candles[candles.length - 1]));
     }
 
     function draw(now) {
-        const w = canvas.clientWidth, h = canvas.clientHeight;
         const dt = Math.min(64, now - last);
         last = now;
-        offset += dt * 0.03;                       // scroll speed
-        while (offset >= step) {
-            offset -= step;
-            points.shift();
-            points.push(nextValue(points[points.length - 1]));
+        offset += dt * 0.012;   // the sky chart drifts slowly to the left
+        while (offset >= CW + GAP) {
+            offset -= CW + GAP;
+            candles.shift();
+            candles.push(nextCandle(candles[candles.length - 1]));
         }
 
         ctx.clearRect(0, 0, w, h);
-        ctx.beginPath();
-        points.forEach((v, i) => {
-            const x = i * step - offset;
-            if (i === 0) ctx.moveTo(x, v); else ctx.lineTo(x, v);
+
+        stars.forEach(st => {
+            ctx.fillStyle = `rgba(242, 244, 247, ${0.15 + 0.15 * Math.sin(now / 900 + st.phase)})`;
+            ctx.fillRect(st.x, st.y, 2, 2);
         });
 
-        // Gold line
-        ctx.strokeStyle = "rgba(245, 196, 81, 0.45)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        const snap = (v) => Math.round(v / PX) * PX;
+        candles.forEach((c, i) => {
+            const x = snap(i * (CW + GAP) - offset);
+            ctx.fillStyle = c.close <= c.open ? "rgba(76, 195, 138, 0.13)" : "rgba(242, 109, 109, 0.13)";
+            ctx.fillRect(x + CW / 2 - 1, snap(c.high), PX - 1, snap(c.low) - snap(c.high));
+            ctx.fillRect(x, snap(Math.min(c.open, c.close)), CW, Math.max(PX, snap(Math.abs(c.close - c.open))));
+        });
 
-        // Faint fill underneath
-        const lastX = (points.length - 1) * step - offset;
-        ctx.lineTo(lastX, h);
-        ctx.lineTo(-offset, h);
-        ctx.closePath();
-        const fill = ctx.createLinearGradient(0, h * 0.3, 0, h);
-        fill.addColorStop(0, "rgba(245, 196, 81, 0.06)");
-        fill.addColorStop(1, "rgba(245, 196, 81, 0)");
-        ctx.fillStyle = fill;
-        ctx.fill();
+        ctx.drawImage(skyline, 0, 0, w, h);
+
+        // Flickering windows and blinking antenna lights
+        windows.forEach(win => {
+            if (Math.random() < 0.002) win.on = !win.on;
+            if (!win.on) return;
+            ctx.fillStyle = "rgba(245, 196, 81, 0.7)";
+            ctx.fillRect(win.x, win.y, PX, PX);
+        });
+        lights.forEach(l => {
+            if (Math.sin(now / 500 + l.phase) > 0.3) {
+                ctx.fillStyle = "rgba(242, 109, 109, 0.9)";
+                ctx.fillRect(l.x - 1, l.y, PX + 2, PX);
+            }
+        });
 
         if (!reduceMotion) homeChartFrame = requestAnimationFrame(draw);
     }
@@ -467,12 +529,16 @@ function showTeasers(cards, day) {
 
 // Mon–Fri mini tiles for this week (or the first week, before the daily cards start)
 function showWeekStrip(key, week) {
-    const strip = $("today-week");
+    showWeekTiles($("today-week"), key < DAILY_START ? DAILY_START : weekKey(key), week, key);
+}
+
+// One tile per weekday: the day's result in green or red, today outlined in gold,
+// days still to come locked. Used on the Today tab and the Week tab.
+function showWeekTiles(strip, monday, week, key) {
     strip.innerHTML = "";
-    const monday = key < DAILY_START ? DAILY_START : weekKey(key);
     ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach((name, i) => {
         const dayKey = addDays(monday, i);
-        const day = week.week === monday ? week.days[dayKey] : null;
+        const day = week && week.week === monday ? week.days[dayKey] : null;
         const played = day && day.results.length > 0;
         const dayPnl = played ? dayEnd(day) - day.start : 0;
         const locked = dayKey > key;
@@ -499,6 +565,21 @@ $("btn-practice").addEventListener("click", startPractice);
 
 // The week: a tile per weekday, a graph of the portfolio, stats and past weeks
 function showWeek(key, week) {
+    // Before the daily cards start, there's no week to show yet
+    if (key < DAILY_START) {
+        $("week-kicker").textContent = "Week of " + shortDay(DAILY_START);
+        $("week-pnl").textContent = "Your first week";
+        $("week-pnl").className = "headline";
+        $("week-balance").textContent = "Starts with $10,000 on " + longDay(DAILY_START);
+        showWeekTiles($("week-days"), DAILY_START, null, key);
+        $("week-chart").innerHTML = "";
+        $("week-note").textContent = "Each weekday's result will appear here, with a graph of your portfolio and your stats.";
+        $("week-stats").innerHTML = "";
+        $("week-compare").textContent = "";
+        $("past-weeks").innerHTML = "";
+        return;
+    }
+
     const balance = weekBalance(week);
     const pnl = balance - START_VALUE;
     $("week-kicker").textContent = "Week of " + shortDay(week.week);
@@ -507,25 +588,8 @@ function showWeek(key, week) {
     $("week-balance").textContent = `Portfolio ${money(balance)} · ${weekReturnText()}`;
 
     // Monday to Friday tiles
-    const tiles = $("week-days");
-    tiles.innerHTML = "";
     const names = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-    names.forEach((name, i) => {
-        const dayKey = addDays(week.week, i);
-        const day = week.days[dayKey];
-        const played = day && day.results.length > 0;
-        const dayPnl = played ? dayEnd(day) - day.start : 0;
-
-        const tile = document.createElement("div");
-        tile.className = "day-tile" +
-            (played ? (dayPnl >= 0 ? " up" : " down") : "") +
-            (dayKey === key ? " today" : "") +
-            (dayKey > key ? " future" : "");
-        tile.appendChild(cell("span", `${name} ${parseKey(dayKey).getDate()}`, "day-name"));
-        tile.appendChild(cell("span", played ? compactMoney(dayPnl) : "—", "day-pnl"));
-        tile.appendChild(cell("span", played ? (day.results.length === 1 ? "1 card" : `${day.results.length} cards`) : "", "day-sub"));
-        tiles.appendChild(tile);
-    });
+    showWeekTiles($("week-days"), week.week, week, key);
 
     // The graph: $10,000 at the start, then the portfolio at the end of each weekday so far
     const values = [START_VALUE];

@@ -27,7 +27,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 
 - **Stack:** static site only. Plain HTML, CSS and vanilla JS. No frameworks, no build step, no npm packages in the site, no backend, no accounts, no payments, no analytics.
 - **Storage:** `localStorage` only, and every read and write is wrapped in try/catch.
-- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards, then restyled once more on 16 Oct 2026 (one font, Rubik; simpler flat colours; chunky buttons with a bottom edge). On 17 Oct Michael chose to build daily mode (see below) before the friend test. Don't add features or restyle anything else. Only bug fixes are allowed until Michael has run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
+- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards, then restyled once more on 16 Oct 2026 (one font, Rubik; simpler flat colours; chunky buttons with a bottom edge), and given a Krillion-inspired night-city background on 18 Oct 2026 after the friend test. On 17 Oct Michael chose to build daily mode (see below) before the friend test. Don't add features or restyle anything else. Only bug fixes are allowed until Michael has run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
 - **Commits:** end the message with `(code by Claude)`, e.g. `Fix results colours (code by Claude)`. Michael commits and pushes himself in VS Code unless he asks you to.
 
 ## Files
@@ -45,7 +45,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 
 - **Settings at the top:** `START_VALUE` 10000, `STAKES` {low .10, mid .25, high .50}, `SITE_URL`, `DAILY_START`, `CARDS_PER_DAY`.
 - **Load:** fetch `puzzles.json`, then `showHome()`. On failure, show the `#error` panel.
-- **Home:** `buildTape()` is the scrolling ticker (made-up market words, not real stocks). `startHomeChart()` is the gold random-walk line on `#bg-chart`. Its `band()` keeps the line below the home text.
+- **Home:** `buildTape()` is the scrolling ticker (made-up market words, not real stocks). `startHomeChart()` draws the background scene on `#bg-chart` behind every screen: a night sky (CSS gradient on `body`), a pixel-art city skyline (seeded, so it's the same city every time) with flickering windows and blinking antenna lights, and a faint decorative candlestick chart drifting across the sky (a random walk, not real prices). `body::before` adds faint CRT scanlines above the canvas but below the panels. The home title uses the Silkscreen pixel font (`--pixel`) with a green/red offset; everything else stays Rubik.
 - **Daily mode:** 2 cards every weekday (`CARDS_PER_DAY`), taken from `puzzles.json` **in file order** starting on `DAILY_START` (Mon 26 Oct 2026). No cards at weekends. New cards must be added at the end of the file; moving or deleting one shifts every later day.
   - Dates are local `"YYYY-MM-DD"` keys. `?day=2026-10-27` in the URL pretends it's another day, for testing.
   - `todaysCards(key)`, `tradingDayIndex(key)`, `weekKey(key)` (Monday of that week; weekends belong to the week just ended).
