@@ -8,19 +8,19 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 
 | Card | Event | Status |
 |---|---|---|
-| 1 | Meta, Feb 2023 | ✅ In `puzzles.json`, with `prices` |
-| 2 | Netflix, Apr 2024 | ✅ In `puzzles.json`, with `prices` (text to be rewritten by Michael) |
-| 3 | Nike, Jun 2025 | ✅ In `puzzles.json`, with `prices` (move +15.2%: $62.54 → $72.04) |
-| 4 | Palantir, Nov 2025 | ✅ In `puzzles.json`, with `prices` (move −7.9%: $207.18 → $190.74) |
+| 1 | Meta, Feb 2023 | ✅ In `puzzles.json`, with `candles` |
+| 2 | Netflix, Apr 2024 | ✅ In `puzzles.json`, with `candles` (text to be rewritten by Michael) |
+| 3 | Nike, Jun 2025 | ✅ In `puzzles.json`, with `candles` (move +15.2%: $62.54 → $72.04) |
+| 4 | Palantir, Nov 2025 | ✅ In `puzzles.json`, with `candles` (move −7.9%: $207.18 → $190.74) |
 | 5 | Microsoft, Jan 2026 | To write |
 | 6 | Tesla, Apr 2024 | To write |
 | 7 | Oracle, Sep 2025 | To write |
 | 8 | Nvidia, Feb 2026 | To write |
 | 9 | Meta, Feb 2024 (control) | To write |
 | 10 | Amazon, Feb 2024 (control) | To write |
-| 11 | Intel, Aug 2024 (control) | ✅ In `puzzles.json`, with `prices` (move −26.1%: $29.05 → $21.48) |
-| 12 | Apple, Oct 2024 (small move) | ✅ In `puzzles.json`, with `prices` (move −1.3%: $225.91 → $222.91) |
-| 13 | Alphabet, Oct 2024 (small move, control) | ✅ In `puzzles.json`, with `prices` (move +2.8%: $169.68 → $174.46) |
+| 11 | Intel, Aug 2024 (control) | ✅ In `puzzles.json`, with `candles` (move −26.1%: $29.05 → $21.48) |
+| 12 | Apple, Oct 2024 (small move) | ✅ In `puzzles.json`, with `candles` (move −1.3%: $225.91 → $222.91) |
+| 13 | Alphabet, Oct 2024 (small move, control) | ✅ In `puzzles.json`, with `candles` (move +2.8%: $169.68 → $174.46) |
 
 Not used for now:
 
@@ -34,10 +34,11 @@ Not used for now:
 1. **Expected vs actual (revenue, EPS):** search "[company] earnings [quarter] CNBC". CNBC's results-day article lists both, with estimates from LSEG. Use one consensus source per card.
 2. **Also announced** (guidance, buybacks, job cuts): the same article, or the company's own press release (search "[company] investor relations [quarter] results").
 3. **Mood before:** the price chart for the 3–6 months before, plus one line on what investors were worried about.
-4. **Next-day move and `prices`:** go to `finance.yahoo.com/quote/TICKER/history`.
+4. **Next-day move and `candles`:** go to `finance.yahoo.com/quote/TICKER/history` (or ask Claude to fetch them).
    - Most companies report after the market closes, so the move happens the next trading day.
    - Move % = (close the day after − close on results day) ÷ close on results day × 100.
-   - Copy about 10 daily closes into `prices`. The last one must be the close the day after the results.
+   - Copy about 10 trading days into `candles` as `[open, high, low, close]`. The last one must be the day after the results.
+   - Good cards for trading have a big gap between the next day's open and close (e.g. Alphabet: opened +6.5%, closed +2.8%).
 5. **Source:** the link to the article you used.
 
 ## How to read the numbers

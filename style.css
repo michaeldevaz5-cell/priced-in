@@ -621,6 +621,8 @@ code {
     color: var(--text-soft);
 }
 
+.hint.small { font-size: 12px; color: var(--muted); }
+
 .hint strong.is-up { color: var(--up); }
 .hint strong.is-down { color: var(--down); }
 

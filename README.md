@@ -1,6 +1,6 @@
 # Priced In
 
-A game about how markets react to news. Each card is a real company results day, with the name hidden. You read what investors expected, what the company reported and what else it announced, then call it: did the stock go **up or down** the next day, and was the move **big or small**?
+A game about how markets react to news. Each card is a real company results day, with the name hidden. You read what investors expected, what the company reported and what else it announced, then trade it: **buy**, **short** or stay out before the results, and the next morning decide whether to **exit at the open** or **hold to the close**. Your profit or loss is the real price move.
 
 The lesson running through it: prices move on **surprise versus expectations**, not on whether the news sounds good.
 
@@ -33,14 +33,17 @@ Add an object to `puzzles.json`:
   "why": "Two sentences explaining the move",
   "tag": "Short lesson label",
   "source": "https://...",
-  "prices": [101.2, 100.8, 102.0, 99.5, 100.1]
+  "candles": [
+    [100.10, 101.50, 99.80, 101.20],
+    [101.30, 101.90, 100.40, 100.80]
+  ]
 }
 ```
 
 - Numbers go in without units; the unit goes in the label.
 - `movePct` is negative for a fall. Big means 5% or more.
 - **Order matters.** Daily cards come from `puzzles.json` in order, 2 per weekday, starting Monday 26 October 2026. Always add new cards at the end. Moving or deleting a card shifts every day after it.
-- `prices` is optional: daily closing prices, with the **last one being the day after the results**. Without it, the chart shows just the close before and the close after.
+- `candles` are about 10 trading days as `[open, high, low, close]`, with the **last one being the day after the results**. The game uses its open for the "exit at the open" choice.
 
 ## Run it locally
 

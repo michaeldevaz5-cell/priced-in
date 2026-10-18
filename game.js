@@ -6,10 +6,8 @@
 // =============================================================
 
 // ---------- Settings ----------
-const BIG_MOVE = 5;              // a move of 5% or more counts as "big"
 const START_VALUE = 10000;       // every week (and every practice round) starts with $10,000
-const STAKES = { low: 0.10, mid: 0.25, high: 0.50 };   // share of the portfolio you bet
-const HALF_WIN = 0.5;            // right direction, wrong size: win half your bet
+const STAKES = { low: 0.10, mid: 0.25, high: 0.50 };   // share of the portfolio you put on a trade
 const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
 const DAILY_START = "2026-10-26";  // the Monday the first daily cards go live
 const CARDS_PER_DAY = 2;           // daily cards come from puzzles.json in order, 2 per weekday
@@ -20,8 +18,6 @@ let mode = "practice";       // "daily" (today's cards) or "practice" (every car
 let deck = [];               // the cards in this round
 let dailyKey = null;         // the day being played in daily mode, e.g. "2026-10-26"
 let cardIndex = 0;           // which card of the deck we're on (0 = first)
-let pickedDir = null;        // "up" or "down"
-let pickedSize = null;       // "small" or "big"
 let portfolio = START_VALUE; // current portfolio value in dollars
 let results = [];            // one entry per finished card
 
@@ -374,7 +370,7 @@ function showToday(key, week) {
         button = "Go to Practice";
     } else if (done === 0) {
         title = cards.length === 1 ? "1 new card" : `${cards.length} new cards`;
-        text = `Your portfolio: ${money(portfolio)} (${weekReturnText()} this week). Read each card, make your calls and place your bets.`;
+        text = `Your portfolio: ${money(portfolio)} (${weekReturnText()} this week). Read each card and make your trade.`;
         button = cards.length === 1 ? "Play today's card" : "Play today's cards";
     } else if (done < cards.length) {
         title = "Finish today's cards";
@@ -478,12 +474,13 @@ function showWeek(key, week) {
         const best = all.reduce((a, b) => (b.pnl > a.pnl ? b : a));
         const worst = all.reduce((a, b) => (b.pnl < a.pnl ? b : a));
         const biggest = all.reduce((a, b) => (b.stake > a.stake ? b : a));
-        addStat(stats, "Direction right", `${all.filter(r => r.dirRight).length} of ${all.length}`);
-        addStat(stats, "Size right", `${all.filter(r => r.sizeRight).length} of ${all.length}`);
-        addStat(stats, "Biggest bet", `${money(biggest.stake)} · ${biggest.company}`);
+        const trades = all.filter(r => r.side !== "out");
+        addStat(stats, "Right way round", `${trades.filter(r => r.dirRight).length} of ${trades.length}`);
+        addStat(stats, "Better exit", `${trades.filter(r => r.timingRight).length} of ${trades.length}`);
+        addStat(stats, "Biggest trade", `${money(biggest.stake)} · ${biggest.company}`);
         addStat(stats, "Best call", `${signedMoney(best.pnl)} · ${best.company}`, best.pnl >= 0 ? "is-up" : "is-down");
         addStat(stats, worst.pnl >= 0 ? "Smallest win" : "Worst call", `${signedMoney(worst.pnl)} · ${worst.company}`, worst.pnl >= 0 ? "is-up" : "is-down");
-        $("week-compare").textContent = compareWithAlwaysBig(all, balance);
+        $("week-compare").textContent = compareWithHolding(all, balance);
     }
 
     // Past weeks
@@ -509,21 +506,19 @@ function addStat(box, label, value, className) {
     box.appendChild(stat);
 }
 
-// Replay the week with the same directions and bets, but always calling Big.
-// It shows whether your size calls actually helped.
-function compareWithAlwaysBig(all, balance) {
-    if (all.some(r => typeof r.share !== "number")) return "";
+// Replay the week with the same trades, but always holding to the close.
+// It shows whether your choices at the open actually helped.
+function compareWithHolding(all, balance) {
+    if (all.some(r => typeof r.closeRet !== "number")) return "";
     let value = START_VALUE;
     all.forEach(r => {
-        const stake = Math.round(value * r.share);
-        if (!r.dirRight) value -= stake;
-        else if (r.bigMove) value += stake;
-        else value += Math.round(stake * HALF_WIN);
+        const sign = r.side === "long" ? 1 : r.side === "short" ? -1 : 0;
+        value += Math.round(Math.round(value * r.share) * sign * r.closeRet);
     });
     const diff = Math.round(balance - value);
-    if (diff > 0) return `You beat "always pick Big" by ${money(diff)}.`;
-    if (diff < 0) return `"Always pick Big" would have made ${money(-diff)} more. Small moves happen too.`;
-    return `You finished level with "always pick Big".`;
+    if (diff > 0) return `Your exits beat "always hold to the close" by ${money(diff)}.`;
+    if (diff < 0) return `"Always hold to the close" would have made ${money(-diff)} more.`;
+    return `You finished level with "always hold to the close".`;
 }
 
 // A small line chart of the portfolio over the week, with the $10,000 start as a dashed line
@@ -592,6 +587,10 @@ function startDaily() {
     showReturn();
     if (cardIndex >= deck.length) { showHub("today"); return; }
     showCard();
+    if (day.pending && day.pending.id === deck[cardIndex].id) {
+        trade = day.pending;
+        showOpen();
+    }
 }
 
 // The "Return" box in the HUD: how far the portfolio is up or down
@@ -607,7 +606,7 @@ function showSquares() {
     box.innerHTML = "";
     deck.forEach((_, i) => {
         const sq = document.createElement("i");
-        if (i < results.length) sq.className = results[i].pnl >= 0 ? "hit" : "miss";
+        if (i < results.length) sq.className = results[i].side === "out" ? "" : results[i].pnl >= 0 ? "hit" : "miss";
         else if (i === cardIndex) sq.className = "now";
         box.appendChild(sq);
     });
@@ -616,8 +615,7 @@ function showSquares() {
 // Show the current card and the Up/Down buttons
 function showCard() {
     const puzzle = deck[cardIndex];
-    pickedDir = null;
-    pickedSize = null;
+    trade = null;
 
     $("progress").textContent = `Card ${cardIndex + 1} of ${deck.length}`;
     $("when").textContent = puzzle.when;
@@ -628,6 +626,14 @@ function showCard() {
     showSquares();
 
     showOnly("card");
+    // The days before the results, without prices, so price levels can't give the company away
+    if (puzzle.candles) {
+        drawCandles("card-chart", puzzle.candles.slice(0, -1), {});
+        $("card-chart-note").textContent = `The ${puzzle.candles.length - 1} trading days up to the results.`;
+    } else {
+        $("card-chart").innerHTML = "";
+        $("card-chart-note").textContent = "";
+    }
     showButtons("dir-buttons");
     replayAnimation($("card"), "enter");
     window.scrollTo(0, 0);
@@ -697,71 +703,134 @@ function cell(tag, text, className) {
 }
 
 
-// ---------- 5. The player's three choices: direction, size, bet ----------
-$("btn-up").addEventListener("click", () => pickDirection("up"));
-$("btn-down").addEventListener("click", () => pickDirection("down"));
-$("btn-small").addEventListener("click", () => pickSizeChoice("small"));
-$("btn-big").addEventListener("click", () => pickSizeChoice("big"));
-$("btn-low").addEventListener("click", () => placeBet("low"));
-$("btn-mid").addEventListener("click", () => placeBet("mid"));
-$("btn-high").addEventListener("click", () => placeBet("high"));
+// ---------- 5. The trade: buy, short or stay out, how much, then when to sell ----------
+// The trade starts at the close on results day (the results come out after the market shuts).
+// The next morning the player sees the opening price and either takes the profit or loss
+// there, or holds until the close. The profit or loss is the real price move on the position.
+let trade = null;   // the trade on this card: { side: "long" or "short", share, stake }
 
-function pickDirection(dir) {
-    pickedDir = dir;
-    $("picked").textContent = dir === "up" ? "UP" : "DOWN";
-    $("picked").className = dir === "up" ? "is-up" : "is-down";
-    showButtons("size-buttons");
-}
+$("btn-up").addEventListener("click", () => pickSide("long"));
+$("btn-down").addEventListener("click", () => pickSide("short"));
+$("btn-out").addEventListener("click", () => finishTrade({ side: "out", share: 0, stake: 0 }, "close"));
+$("btn-low").addEventListener("click", () => placeTrade("low"));
+$("btn-mid").addEventListener("click", () => placeTrade("mid"));
+$("btn-high").addEventListener("click", () => placeTrade("high"));
+$("btn-exit-open").addEventListener("click", () => finishTrade(trade, "open"));
+$("btn-exit-close").addEventListener("click", () => finishTrade(trade, "close"));
 
-function pickSizeChoice(size) {
-    pickedSize = size;
-    $("picked-2").textContent = (pickedDir === "up" ? "UP" : "DOWN") + " · " + size.toUpperCase();
-    $("picked-2").className = pickedDir === "up" ? "is-up" : "is-down";
+function pickSide(side) {
+    trade = { side };
+    $("picked-2").textContent = side === "long" ? "BUY" : "SHORT";
+    $("picked-2").className = side === "long" ? "is-up" : "is-down";
 
-    // Show how many dollars each bet level is right now
+    // Show how many dollars each level is right now
     $("amt-low").textContent = `${STAKES.low * 100}% · ${money(portfolio * STAKES.low)}`;
     $("amt-mid").textContent = `${STAKES.mid * 100}% · ${money(portfolio * STAKES.mid)}`;
     $("amt-high").textContent = `${STAKES.high * 100}% · ${money(portfolio * STAKES.high)}`;
     showButtons("stake-buttons");
 }
 
-function placeBet(level) {
-    const puzzle = deck[cardIndex];
-    const move = puzzle.answer.movePct;
-    const actualSize = Math.abs(move) >= BIG_MOVE ? "big" : "small";
-    const dirRight = pickedDir === puzzle.answer.direction;
-    const sizeRight = pickedSize === actualSize;
+function placeTrade(level) {
+    trade.share = STAKES[level];
+    trade.stake = Math.round(portfolio * trade.share);
+    savePending(trade);
+    if (reaction(deck[cardIndex]).hasOpen) showOpen();
+    else finishTrade(trade, "close");
+}
 
-    // Work out the profit or loss on the bet
-    const stake = Math.round(portfolio * STAKES[level]);
-    let pnl;
-    if (dirRight && sizeRight) pnl = stake;                        // both right: win the bet
-    else if (dirRight) pnl = Math.round(stake * HALF_WIN);          // right way, wrong size: win half
-    else pnl = -stake;                                              // wrong way: lose the bet
+// In daily mode the open trade is saved before the opening price is shown,
+// so reloading the page can't be used to change the trade after seeing the open
+function savePending(t) {
+    if (mode !== "daily") return;
+    const week = loadWeek();
+    const day = week.days[dailyKey];
+    if (!day) return;
+    day.pending = { id: deck[cardIndex].id, side: t.side, share: t.share, stake: t.stake };
+    storeWeek(week);
+}
+
+// The prices that matter on the day after the results
+function reaction(puzzle) {
+    const c = puzzle.candles;
+    if (Array.isArray(c) && c.length >= 2) {
+        const day = c[c.length - 1];
+        return { before: c[c.length - 2][3], open: day[0], high: day[1], low: day[2], close: day[3], hasOpen: true };
+    }
+    // A card without candles: only the move from close to close is known
+    const before = 100, close = 100 * (1 + puzzle.answer.movePct / 100);
+    return { before, open: close, high: Math.max(before, close), low: Math.min(before, close), close, hasOpen: false };
+}
+
+const pct = (from, to) => (to - from) / from;
+const signedPct = (r) => (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(1) + "%";
+
+// The next morning: the opening price is in
+function showOpen() {
+    const puzzle = deck[cardIndex];
+    const r = reaction(puzzle);
+    const openRet = pct(r.before, r.open);
+    const sign = trade.side === "long" ? 1 : -1;
+    const pnlNow = Math.round(trade.stake * sign * openRet);
+
+    $("open-when").textContent = "The next morning · " + puzzle.when;
+    $("open-move").textContent = "Opened " + signedPct(openRet);
+    $("open-move").className = "headline " + (openRet >= 0 ? "is-up" : "is-down");
+    $("open-text").textContent = `You ${trade.side === "long" ? "bought" : "shorted"} ${money(trade.stake)} at the close before the results. ` +
+        `At the open you're ${pnlNow >= 0 ? "up" : "down"} ${money(Math.abs(pnlNow))}.`;
+    $("exit-open-pnl").textContent = signedMoney(pnlNow);
+
+    showOnly("open");
+    if (puzzle.candles) {
+        drawCandles("open-chart", puzzle.candles, { openOnlyLast: true, marker: puzzle.candles.length - 2 });
+    }
+    showButtons("exit-buttons");
+    replayAnimation($("open"), "enter");
+    window.scrollTo(0, 0);
+}
+
+function finishTrade(t, exit) {
+    const puzzle = deck[cardIndex];
+    const r = reaction(puzzle);
+    const openRet = pct(r.before, r.open);
+    const closeRet = pct(r.before, r.close);
+    const sign = t.side === "long" ? 1 : t.side === "short" ? -1 : 0;
+    const exitRet = exit === "open" ? openRet : closeRet;
+    const otherRet = exit === "open" ? closeRet : openRet;
+    const pnl = Math.round(t.stake * sign * exitRet);
+
+    const result = {
+        id: puzzle.id, company: puzzle.company,
+        side: t.side, share: t.share, stake: t.stake, exit, pnl,
+        dirRight: t.side === "out" ? null : sign * closeRet > 0,           // was the trade the right way round?
+        timingRight: t.side === "out" ? null : sign * exitRet >= sign * otherRet,   // did you pick the better exit?
+        openRet, closeRet
+    };
+    results.push(result);
+    trade = null;
 
     const before = portfolio;
     portfolio += pnl;
 
-    const result = { id: puzzle.id, company: puzzle.company, dirRight, sizeRight, pnl, stake, share: STAKES[level], bigMove: actualSize === "big" };
-    results.push(result);
-
-    // Daily cards are saved straight away, so leaving halfway through loses nothing
+    // Daily results are saved straight away, so leaving halfway through loses nothing
     if (mode === "daily") {
         const week = loadWeek();
-        if (week.days[dailyKey]) {
-            week.days[dailyKey].results.push(result);
+        const day = week.days[dailyKey];
+        if (day) {
+            day.results.push(result);
+            delete day.pending;
             storeWeek(week);
         }
     }
 
-    showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before);
+    showReveal(puzzle, result, before);
 }
 
 
 // ---------- 6. The reveal ----------
-function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before) {
+function showReveal(puzzle, result, before) {
     const move = puzzle.answer.movePct;
     const isUp = puzzle.answer.direction === "up";
+    const r = reaction(puzzle);
 
     $("reveal-when").textContent = "Next-day close · " + puzzle.when;
     $("company").textContent = "It was " + puzzle.company + ".";
@@ -770,32 +839,50 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before)
     $("tag").textContent = "Lesson: " + puzzle.tag;
     $("source").href = puzzle.source;
 
-    setVerdict("verdict-dir", isUp ? "Up" : "Down", dirRight);
-    setVerdict("verdict-size", actualSize === "big" ? "Big" : "Small", sizeRight);
+    // Position and exit boxes
+    if (result.side === "out") {
+        setVerdict("verdict-dir", "Stayed out", null);
+        setVerdict("verdict-size", "—", null);
+    } else {
+        setVerdict("verdict-dir", result.side === "long" ? "Bought" : "Shorted", result.dirRight);
+        setVerdict("verdict-size", result.exit === "open" ? "At the open" : "Held", result.timingRight);
+    }
 
-    // The bet result: green if you made money, red if you lost
-    $("pnl").className = "stat-value " + (pnl >= 0 ? "is-up" : "is-down");
-    let outcome;
-    if (dirRight && sizeRight) outcome = "Both calls right: you win your bet.";
-    else if (dirRight) outcome = "Right direction, wrong size: you win half.";
-    else outcome = "Wrong direction: you lose your bet.";
-    $("pnl-detail").textContent = `Bet ${money(stake)}. ${outcome}`;
+    // What happened, in dollars and prices
+    $("pnl").className = "stat-value " + (result.pnl > 0 ? "is-up" : result.pnl < 0 ? "is-down" : "");
+    const exitPrice = result.exit === "open" ? r.open : r.close;
+    let detail;
+    if (result.side === "out") {
+        detail = `You stayed out. It opened ${signedPct(result.openRet)} and closed ${signedPct(result.closeRet)}.`;
+    } else {
+        const verb = result.side === "long" ? "bought" : "shorted";
+        const exitVerb = result.side === "long" ? "sold" : "bought back";
+        detail = r.hasOpen
+            ? `You ${verb} ${money(result.stake)} at $${r.before.toFixed(2)} and ${exitVerb} ${result.exit === "open" ? "at the open" : "at the close"} at $${exitPrice.toFixed(2)}.`
+            : `You ${verb} ${money(result.stake)}. It moved ${signedPct(result.closeRet)} by the close.`;
+        if (r.hasOpen && !result.timingRight) {
+            const sign = result.side === "long" ? 1 : -1;
+            const other = Math.round(result.stake * sign * (result.exit === "open" ? result.closeRet : result.openRet));
+            detail += ` ${result.exit === "open" ? "Holding to the close" : "Taking it at the open"} would have made ${signedMoney(other)}.`;
+        }
+    }
+    $("pnl-detail").textContent = detail;
 
     showSquares();
     showReturn();
 
     // Numbers tick: the % move, then your profit/loss, then the portfolio in the top bar
-    const decimals = Number.isInteger(Math.abs(move)) ? 0 : 1;
+    const places = Number.isInteger(Math.abs(move)) ? 0 : 1;
     const moveSign = move >= 0 ? "+" : "−";
-    animateNumber($("move"), 0, Math.abs(move), v => moveSign + v.toFixed(decimals) + "%", 250);
-    animateNumber($("pnl"), 0, pnl, v => signedMoney(v), 1500);
+    animateNumber($("move"), 0, Math.abs(move), v => moveSign + v.toFixed(places) + "%", 250);
+    animateNumber($("pnl"), 0, result.pnl, v => signedMoney(v), 1500);
     animateNumber($("portfolio"), before, portfolio, v => money(v), 1500);
 
     showOnly("reveal");
-    drawChart(puzzle, isUp);           // drawn after the panel is visible, so it can measure its width
+    drawChart(puzzle);           // drawn after the panel is visible, so it can measure its width
     restartAnimations($("reveal"));
-    flash(dirRight);
-    if (!dirRight) replayAnimation($("verdict-dir").parentElement, "shake");
+    if (result.pnl !== 0) flash(result.pnl > 0);
+    if (result.pnl < 0) replayAnimation($("pnl").parentElement, "shake");
 
     const lastCard = cardIndex === deck.length - 1;
     $("btn-next").textContent = !lastCard ? "Next card" : mode === "daily" ? "Finish today" : "See results";
@@ -803,9 +890,10 @@ function showReveal(puzzle, dirRight, sizeRight, actualSize, stake, pnl, before)
     window.scrollTo(0, 0);
 }
 
-function setVerdict(id, answerText, right) {
-    $(id).textContent = answerText + (right ? " ✓" : " ✗");
-    $(id).className = "stat-value " + (right ? "is-up" : "is-down");
+// right: true (green tick), false (red cross) or null (no verdict)
+function setVerdict(id, text, right) {
+    $(id).textContent = text + (right === true ? " ✓" : right === false ? " ✗" : "");
+    $(id).className = "stat-value " + (right === true ? "is-up" : right === false ? "is-down" : "");
 }
 
 // Make a number count from one value to another, fast at first then slowing down
@@ -825,63 +913,77 @@ function animateNumber(el, from, to, format, delay) {
     requestAnimationFrame(tick);
 }
 
-// Draw the price line. If a card has "prices" (daily closes, the last one
-// being the day after the results), they're used. Otherwise the line just
-// goes from the previous close to the next-day close.
-function drawChart(puzzle, isUp) {
-    // Draw at the panel's real width so the chart stays a sensible height on big screens
-    const W = Math.max(260, Math.round($("chart").clientWidth || 340));
-    const H = W > 500 ? 170 : 140;
-    const PAD = 10;
-    const colour = isUp ? "var(--up)" : "var(--down)";
-
-    let prices = puzzle.prices;
-    let note;
-    const realPrices = Array.isArray(prices) && prices.length >= 2;
-    if (realPrices) {
-        note = "Daily closing prices. Hover or tap the line to see each day.";
-    } else {
-        prices = [100, 100, 100 * (1 + puzzle.answer.movePct / 100)];
-        note = "Close before the results → close the day after.";
+// The reveal chart: every candle, with hover for the real prices
+function drawChart(puzzle) {
+    if (!puzzle.candles) {
+        $("chart").innerHTML = "";
+        $("chart-note").textContent = "";
+        return;
     }
-
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    const range = max - min || 1;
-    const x = (i) => PAD + (i / (prices.length - 1)) * (W - PAD * 2);
-    const y = (p) => H - PAD - ((p - min) / range) * (H - PAD * 2);
-
-    const linePath = smoothPath(prices.map((p, i) => [x(i), y(p)]));
-    const areaPath = linePath + ` L${x(prices.length - 1).toFixed(1)} ${H} L${x(0).toFixed(1)} ${H} Z`;
-    const markerX = x(prices.length - 2).toFixed(1);   // the last close before the results
-    const endX = x(prices.length - 1).toFixed(1);
-    const endY = y(prices[prices.length - 1]).toFixed(1);
-
-    // Only numbers go into this string, never text from the cards
-    $("chart").innerHTML = `
-        <svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Price line ${isUp ? "rising" : "falling"} after the results">
-            <line x1="${markerX}" y1="0" x2="${markerX}" y2="${H}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="3 4"></line>
-            <text x="${markerX}" y="${H + 12}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="11" text-anchor="middle">results</text>
-            <path class="area-fade" d="${areaPath}" fill="${colour}" fill-opacity="0.10"></path>
-            <path class="line-draw" pathLength="1" d="${linePath}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
-            <circle class="dot-pop" cx="${endX}" cy="${endY}" r="6" fill="${colour}"></circle>
-            <line class="hover-line" y1="0" y2="${H}" stroke="var(--text-soft)" stroke-width="1" visibility="hidden"></line>
-            <circle class="hover-dot" r="5" fill="var(--text)" stroke="${colour}" stroke-width="3" visibility="hidden"></circle>
-        </svg>`;
-    $("chart-note").textContent = note;
-
-    // Made-up fallback points aren't real prices, so only real ones get the hover
-    if (realPrices) addChartHover(prices, x, y);
+    drawCandles("chart", puzzle.candles, { marker: puzzle.candles.length - 2, hover: true, popLast: true });
+    $("chart-note").textContent = "Daily candles: each shows the open, high, low and close. Hover or tap to see the prices.";
 }
 
-// Hover (or tap and drag on a phone) along the chart to see each day's close
-// and how much it changed from the day before.
-function addChartHover(prices, x, y) {
-    const chart = $("chart");
-    const svg = chart.querySelector("svg");
+// Draw daily candles as an SVG. Each candle is [open, high, low, close].
+// Green when it closed above its open, red when below.
+// Options: marker = index of results day (a dashed line after it),
+// openOnlyLast = draw the last day as just its opening price,
+// hover = show real prices on hover, popLast = animate the last candle in.
+function drawCandles(boxId, candles, opts) {
+    const box = $(boxId);
+    const W = Math.max(260, Math.round(box.clientWidth || 340));
+    const H = W > 500 ? 170 : 140;
+    const PAD = 10;
+    const n = candles.length;
+    const lastOnlyOpen = (i) => opts.openOnlyLast && i === n - 1;
+
+    const highs = candles.map((k, i) => (lastOnlyOpen(i) ? k[0] : k[1]));
+    const lows = candles.map((k, i) => (lastOnlyOpen(i) ? k[0] : k[2]));
+    const min = Math.min(...lows);
+    const max = Math.max(...highs);
+    const range = max - min || 1;
+    const slot = (W - PAD * 2) / n;
+    const x = (i) => PAD + slot * (i + 0.5);
+    const y = (v) => H - PAD - ((v - min) / range) * (H - PAD * 2);
+    const body = Math.max(3, Math.min(18, slot * 0.6));
+    const f = (v) => v.toFixed(1);
+
+    // Only numbers go into this string, never text from the cards
+    let parts = "";
+    if (opts.marker != null) {
+        const mx = f(x(opts.marker) + slot / 2);
+        parts += `<line x1="${mx}" y1="0" x2="${mx}" y2="${H}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="3 4"></line>
+            <text x="${mx}" y="${H + 12}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="11" text-anchor="middle">results</text>`;
+    }
+    candles.forEach((k, i) => {
+        const [o, h, l, c] = k;
+        if (lastOnlyOpen(i)) {
+            // The opening price as a gold dash, labelled just above (or below, if it's at the top)
+            const labelY = y(o) < 20 ? y(o) + 18 : y(o) - 10;
+            parts += `<g class="dot-pop"><line x1="${f(x(i) - body)}" y1="${f(y(o))}" x2="${f(x(i) + body)}" y2="${f(y(o))}" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"></line>
+                <text x="${f(x(i))}" y="${f(labelY)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="middle">open</text></g>`;
+            return;
+        }
+        const colour = c >= o ? "var(--up)" : "var(--down)";
+        const top = y(Math.max(o, c));
+        const height = Math.max(1.5, Math.abs(y(o) - y(c)));
+        const cls = opts.popLast && i === n - 1 ? ' class="dot-pop"' : "";
+        parts += `<g${cls}><line x1="${f(x(i))}" y1="${f(y(h))}" x2="${f(x(i))}" y2="${f(y(l))}" stroke="${colour}" stroke-width="1.5"></line>
+            <rect x="${f(x(i) - body / 2)}" y="${f(top)}" width="${f(body)}" height="${f(height)}" rx="1.5" fill="${colour}"></rect></g>`;
+    });
+    if (opts.hover) {
+        parts += `<line class="hover-line" y1="0" y2="${H}" stroke="var(--text-soft)" stroke-width="1" visibility="hidden"></line>`;
+    }
+
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Daily price candles">${parts}</svg>`;
+    if (opts.hover) addChartHover(box, candles, x);
+}
+
+// Hover (or tap and drag on a phone) along the chart to see each day's prices
+function addChartHover(box, candles, x) {
+    const svg = box.querySelector("svg");
     const line = svg.querySelector(".hover-line");
-    const dot = svg.querySelector(".hover-dot");
-    const last = prices.length - 1;
+    const last = candles.length - 1;
 
     const tip = document.createElement("div");
     tip.className = "chart-tip";
@@ -890,7 +992,7 @@ function addChartHover(prices, x, y) {
     const tipPrice = document.createElement("strong");
     const tipChange = document.createElement("span");
     tip.append(tipDay, tipPrice, tipChange);
-    chart.appendChild(tip);
+    box.appendChild(tip);
 
     function dayLabel(i) {
         if (i === last) return "Day after results";
@@ -900,28 +1002,25 @@ function addChartHover(prices, x, y) {
     }
 
     function show(clientX) {
-        const box = svg.getBoundingClientRect();
-        const scale = svg.viewBox.baseVal.width / box.width;
-        const svgX = (clientX - box.left) * scale;
+        const rect = svg.getBoundingClientRect();
+        const scale = svg.viewBox.baseVal.width / rect.width;
+        const svgX = (clientX - rect.left) * scale;
 
         // The closest day to the pointer
         let i = 0;
         for (let j = 1; j <= last; j++) {
             if (Math.abs(x(j) - svgX) < Math.abs(x(i) - svgX)) i = j;
         }
-
         line.setAttribute("x1", x(i));
         line.setAttribute("x2", x(i));
-        dot.setAttribute("cx", x(i));
-        dot.setAttribute("cy", y(prices[i]));
         line.setAttribute("visibility", "visible");
-        dot.setAttribute("visibility", "visible");
 
+        const [o, , , c] = candles[i];
         tipDay.textContent = dayLabel(i);
-        tipPrice.textContent = "$" + prices[i].toFixed(2);
+        tipPrice.textContent = `Open $${o.toFixed(2)} · Close $${c.toFixed(2)}`;
         if (i > 0) {
-            const change = (prices[i] - prices[i - 1]) / prices[i - 1] * 100;
-            tipChange.textContent = (change >= 0 ? "+" : "−") + Math.abs(change).toFixed(1) + "%";
+            const change = pct(candles[i - 1][3], c);
+            tipChange.textContent = signedPct(change);
             tipChange.className = change >= 0 ? "is-up" : "is-down";
         } else {
             tipChange.textContent = "";
@@ -930,13 +1029,11 @@ function addChartHover(prices, x, y) {
         // Keep the label inside the chart at both ends
         tip.hidden = false;
         const half = tip.offsetWidth / 2;
-        const left = Math.min(Math.max(x(i) / scale, half), box.width - half);
-        tip.style.left = left + "px";
+        tip.style.left = Math.min(Math.max(x(i) / scale, half), rect.width - half) + "px";
     }
 
     function hide() {
         line.setAttribute("visibility", "hidden");
-        dot.setAttribute("visibility", "hidden");
         tip.hidden = true;
     }
 
@@ -1018,7 +1115,7 @@ function showResults() {
     $("final-score").className = "headline big fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
     showSquares();
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
-    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret, results.filter(r => !r.dirRight).length)}`;
+    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
 
     $("grid").innerHTML = "";
     buildGrid($("grid"), results);
@@ -1055,7 +1152,12 @@ function buildGrid(grid, list) {
     });
 }
 
+// First square: was the trade the right way round? Second: did you pick the better exit?
+// Staying out is two grey squares.
 function squareStates(r) {
+    if (r.side === "out") return ["half", "half"];
+    if (r.side) return [r.dirRight ? "hit" : "miss", r.timingRight ? "hit" : "half"];
+    // Results saved before trading was added
     if (!r.dirRight) return ["miss", "miss"];
     return ["hit", r.sizeRight ? "hit" : "half"];
 }
@@ -1139,12 +1241,12 @@ function saveStats(key) {
 // ---------- Helpers ----------
 // Show one screen and hide the others
 function showOnly(screenId) {
-    ["card", "reveal", "results", "today", "week", "practice", "error"].forEach(id => { $(id).hidden = id !== screenId; });
+    ["card", "open", "reveal", "results", "today", "week", "practice", "error"].forEach(id => { $(id).hidden = id !== screenId; });
 }
 
 // Show one group of buttons and hide the others
 function showButtons(groupId) {
-    ["dir-buttons", "size-buttons", "stake-buttons", "next-step", "end-step", "tab-bar"].forEach(id => { $(id).hidden = id !== groupId; });
+    ["dir-buttons", "stake-buttons", "exit-buttons", "next-step", "end-step", "tab-bar"].forEach(id => { $(id).hidden = id !== groupId; });
 }
 
 // Re-run a one-off animation on an element
