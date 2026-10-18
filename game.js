@@ -1025,11 +1025,23 @@ function drawCandles(boxId, candles, opts) {
 
     // Where the trade starts: a gold dashed line from the entry candle to the right edge
     if (opts.entry) {
-        const ey = f(y(opts.entry.price));
-        const ex = f(x(opts.entry.index));
-        parts += `<line x1="${ex}" y1="${ey}" x2="${plotW}" y2="${ey}" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="4 3"></line>
-            <circle cx="${ex}" cy="${ey}" r="3.5" fill="var(--gold)"></circle>
-            <text x="${f(x(opts.entry.index) - 8)}" y="${f(y(opts.entry.price) + 4)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="end">${opts.entry.label}</text>`;
+        const ey = y(opts.entry.price);
+        const ex = x(opts.entry.index);
+        parts += `<line x1="${f(ex)}" y1="${f(ey)}" x2="${plotW}" y2="${f(ey)}" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="4 3"></line>
+            <circle cx="${f(ex)}" cy="${f(ey)}" r="3.5" fill="var(--gold)"></circle>`;
+
+        // The label goes above the line if the recent candles sit below it, otherwise below,
+        // on a small dark tag so it never reads on top of a candle
+        const recent = candles.slice(Math.max(0, opts.entry.index - 10), opts.entry.index);
+        const below = recent.filter(k => (k[1] + k[2]) / 2 < opts.entry.price).length;
+        const above = recent.length - below;
+        const tagH = 18;
+        const tagW = opts.entry.label.length * 6.4 + 14;
+        let tagY = below >= above ? ey - tagH - 8 : ey + 8;
+        tagY = Math.min(Math.max(tagY, TOP), PRICE_BOTTOM - tagH);
+        const tagX = Math.max(0, ex - tagW + 6);
+        parts += `<rect x="${f(tagX)}" y="${f(tagY)}" width="${f(tagW)}" height="${tagH}" rx="5" fill="var(--bg)" stroke="var(--gold)" stroke-width="1"></rect>
+            <text x="${f(tagX + tagW / 2)}" y="${f(tagY + 12.5)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="middle">${opts.entry.label}</text>`;
     }
     // Where the trade ended
     if (opts.exit) {
