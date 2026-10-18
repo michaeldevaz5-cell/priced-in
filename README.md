@@ -34,8 +34,8 @@ Add an object to `puzzles.json`:
   "tag": "Short lesson label",
   "source": "https://...",
   "candles": [
-    [100.10, 101.50, 99.80, 101.20],
-    [101.30, 101.90, 100.40, 100.80]
+    [100.10, 101.50, 99.80, 101.20, 52300000],
+    [101.30, 101.90, 100.40, 100.80, 48100000]
   ]
 }
 ```
@@ -43,7 +43,7 @@ Add an object to `puzzles.json`:
 - Numbers go in without units; the unit goes in the label.
 - `movePct` is negative for a fall. Big means 5% or more.
 - **Order matters.** Daily cards come from `puzzles.json` in order, 2 per weekday, starting Monday 26 October 2026. Always add new cards at the end. Moving or deleting a card shifts every day after it.
-- `candles` are about 10 trading days as `[open, high, low, close]`, with the **last one being the day after the results**. The game uses its open for the "exit at the open" choice.
+- `candles` are 60 trading days as `[open, high, low, close, volume]`, with the **last one being the day after the results**. The game uses its open for the "exit at the open" choice.
 
 ## Run it locally
 

@@ -56,7 +56,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
   - In daily mode the open trade is saved as `day.pending` **before** the open is shown, so reloading can't change it; `startDaily()` resumes at the open screen.
   - A result stores `side`, `share`, `stake`, `exit`, `pnl`, `dirRight` (right way round), `timingRight` (picked the better exit), `openRet`, `closeRet`.
 - **Scoring:** real P&L on the position (see the top of this file). The stake is a share of the *current* portfolio. Stay out = $0.
-- **Charts:** `drawCandles(boxId, candles, opts)` draws daily candles as SVG at the box's measured width, so call it *after* the panel is visible. Used three times: the card (days before the results, no hover, so price levels can't give the company away), the open screen (`openOnlyLast`: the last day is just a gold "open" dash), and the reveal (`hover` via `addChartHover()`, showing open/close per day). `smoothPath()` is still used by the week graph.
+- **Charts:** `drawCandles(boxId, candles, opts)` draws daily candles trading-platform style (tightly packed candles, faint gridlines at `niceStep()` prices, volume bars along the bottom) as SVG at the box's measured width, so call it *after* the panel is visible. Used three times: the card (days before the results, no price scale or hover, so price levels can't give the company away), the open screen (`openOnlyLast`: the last day is just a gold "open" dash), and the reveal (`axis` price scale with a last-price tag, `hover` via `addChartHover()`). `smoothPath()` is still used by the week graph.
 - **Squares:** `squareStates(r)` gives one shared colour rule for the results grid and the share text. First square: right way round (🟩) or not (🟥). Second: better exit (🟩) or not (⬜). Stayed out: ⬜⬜.
 - **Stats** are saved in localStorage `pricedInStats`: played, bestValue, streak, lastDay. The streak counts daily days finished on consecutive weekdays; practice doesn't touch it.
 - **Every `$("id")` in game.js must exist in index.html.** A missing id throws an error, which shows the error screen. This has happened twice, so grep for it after any HTML change.
@@ -80,15 +80,15 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
   "tag": "Short lesson label",
   "source": "https://...",
   "candles": [
-    [100.10, 101.50, 99.80, 101.20],
-    [101.30, 101.90, 100.40, 100.80]
+    [100.10, 101.50, 99.80, 101.20, 52300000],
+    [101.30, 101.90, 100.40, 100.80, 48100000]
   ]
 }
 ```
 
 - `movePct` is negative for a fall. Big means `abs(movePct) >= 5`.
-- `candles` holds about 10 trading days as `[open, high, low, close]`. The **last one is the day after the results**, and the one before it is results day. The game needs them for the open; a card without candles skips the open step and has no chart.
-- Get them from Yahoo's daily history (Claude can fetch them). Check each candle: low ≤ open, close ≤ high. If the stock has split since (Netflix 10-for-1, Nov 2025), multiply back to the real prices of the time.
+- `candles` holds **60 trading days** as `[open, high, low, close, volume]`. The **last one is the day after the results**, and the one before it is results day. The game needs them for the open; a card without candles skips the open step and has no chart.
+- Get them from Yahoo's daily history (Claude can fetch them). Check each candle: low ≤ open, close ≤ high. If the stock has split since (Netflix 10-for-1, Nov 2025), multiply prices back to the real prices of the time and divide volume by the same factor.
 - Move % = (close after − close before) ÷ close before × 100, using the last two closes. Check it against `movePct`.
 - **Checking a card:**
   - The JSON is valid.
@@ -121,7 +121,7 @@ Before saying a change works:
   - Apple, Oct 2024: has `candles`; the first small move (−1.3%); `otherNews` drafted by Claude at Michael's request
   - Intel, Aug 2024: has `candles`; the first control card (bad news → down); `otherNews` and the first sentence of `why` drafted by Claude at Michael's request
   - Alphabet, Oct 2024: has `candles`; small move (+2.8%) and a control (good news → up); `otherNews` drafted by Claude at Michael's request
-- **Every card has `candles`** (fetched from Yahoo on 18 Oct 2026; closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
+- **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
 - **Friend test:** done 18 Oct 2026. Friends wanted to trade the reaction rather than call it, so the game switched to trading the same day. A minute-by-minute replay was considered but needs licensed intraday data; not planned.

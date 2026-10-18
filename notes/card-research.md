@@ -37,7 +37,7 @@ Not used for now:
 4. **Next-day move and `candles`:** go to `finance.yahoo.com/quote/TICKER/history` (or ask Claude to fetch them).
    - Most companies report after the market closes, so the move happens the next trading day.
    - Move % = (close the day after − close on results day) ÷ close on results day × 100.
-   - Copy about 10 trading days into `candles` as `[open, high, low, close]`. The last one must be the day after the results.
+   - Copy 60 trading days into `candles` as `[open, high, low, close, volume]` (Claude can fetch these). The last one must be the day after the results.
    - Good cards for trading have a big gap between the next day's open and close (e.g. Alphabet: opened +6.5%, closed +2.8%).
 5. **Source:** the link to the article you used.
 

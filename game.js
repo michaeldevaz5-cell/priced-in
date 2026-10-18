@@ -629,7 +629,7 @@ function showCard() {
     // The days before the results, without prices, so price levels can't give the company away
     if (puzzle.candles) {
         drawCandles("card-chart", puzzle.candles.slice(0, -1), {});
-        $("card-chart-note").textContent = `The ${puzzle.candles.length - 1} trading days up to the results.`;
+        $("card-chart-note").textContent = `The ${puzzle.candles.length - 1} trading days up to the results, with volume along the bottom. Prices are hidden so they can't give the company away.`;
     } else {
         $("card-chart").innerHTML = "";
         $("card-chart-note").textContent = "";
@@ -920,20 +920,24 @@ function drawChart(puzzle) {
         $("chart-note").textContent = "";
         return;
     }
-    drawCandles("chart", puzzle.candles, { marker: puzzle.candles.length - 2, hover: true, popLast: true });
-    $("chart-note").textContent = "Daily candles: each shows the open, high, low and close. Hover or tap to see the prices.";
+    drawCandles("chart", puzzle.candles, { marker: puzzle.candles.length - 2, axis: true, hover: true, popLast: true });
+    $("chart-note").textContent = `The last ${puzzle.candles.length} trading days, with volume along the bottom. Hover or tap to see each day's prices.`;
 }
 
-// Draw daily candles as an SVG. Each candle is [open, high, low, close].
-// Green when it closed above its open, red when below.
+// Draw daily candles as an SVG, trading-platform style: tightly packed candles,
+// faint gridlines, volume bars along the bottom and (optionally) a price scale.
+// Each candle is [open, high, low, close, volume]. Green when it closed above its open, red when below.
 // Options: marker = index of results day (a dashed line after it),
 // openOnlyLast = draw the last day as just its opening price,
+// axis = show the price scale (only on the reveal, so prices can't give the company away),
 // hover = show real prices on hover, popLast = animate the last candle in.
 function drawCandles(boxId, candles, opts) {
     const box = $(boxId);
     const W = Math.max(260, Math.round(box.clientWidth || 340));
-    const H = W > 500 ? 170 : 140;
-    const PAD = 10;
+    const H = W > 500 ? 260 : 210;
+    const AXIS = opts.axis ? 48 : 0;          // room for the price scale on the right
+    const TOP = 16;                           // room for the "results" label
+    const PRICE_BOTTOM = Math.round(H * 0.76); // candles above, volume below
     const n = candles.length;
     const lastOnlyOpen = (i) => opts.openOnlyLast && i === n - 1;
 
@@ -941,42 +945,80 @@ function drawCandles(boxId, candles, opts) {
     const lows = candles.map((k, i) => (lastOnlyOpen(i) ? k[0] : k[2]));
     const min = Math.min(...lows);
     const max = Math.max(...highs);
-    const range = max - min || 1;
-    const slot = (W - PAD * 2) / n;
-    const x = (i) => PAD + slot * (i + 0.5);
-    const y = (v) => H - PAD - ((v - min) / range) * (H - PAD * 2);
-    const body = Math.max(3, Math.min(18, slot * 0.6));
+    const pad = (max - min) * 0.06 || 1;
+    const lo = min - pad, hi = max + pad;
+    const plotW = W - AXIS;
+    const slot = plotW / n;
+    const x = (i) => slot * (i + 0.5);
+    const y = (v) => TOP + (hi - v) / (hi - lo) * (PRICE_BOTTOM - TOP);
+    const body = Math.max(1.5, slot * 0.7);
     const f = (v) => v.toFixed(1);
+
+    // Volume bars along the bottom (not for a day that has only opened)
+    const volumes = candles.map((k, i) => (lastOnlyOpen(i) ? 0 : k[4] || 0));
+    const maxVol = Math.max(...volumes) || 1;
+    const VOL_TOP = PRICE_BOTTOM + 8;
 
     // Only numbers go into this string, never text from the cards
     let parts = "";
+
+    // Gridlines at round prices, labelled on the right when the scale is shown
+    const step = niceStep((hi - lo) / 4);
+    for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+        parts += `<line x1="0" y1="${f(y(v))}" x2="${plotW}" y2="${f(y(v))}" stroke="var(--border-soft)" stroke-width="1"></line>`;
+        if (opts.axis) {
+            parts += `<text x="${W - 4}" y="${f(y(v) + 4)}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="10" text-anchor="end">${v.toFixed(step < 1 ? 2 : 0)}</text>`;
+        }
+    }
+    parts += `<line x1="0" y1="${PRICE_BOTTOM}" x2="${plotW}" y2="${PRICE_BOTTOM}" stroke="var(--border)" stroke-width="1"></line>`;
+
     if (opts.marker != null) {
         const mx = f(x(opts.marker) + slot / 2);
-        parts += `<line x1="${mx}" y1="0" x2="${mx}" y2="${H}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="3 4"></line>
-            <text x="${mx}" y="${H + 12}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="11" text-anchor="middle">results</text>`;
+        parts += `<line x1="${mx}" y1="${TOP - 4}" x2="${mx}" y2="${H}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"></line>
+            <text x="${mx}" y="10" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="10" text-anchor="end">results&#8202;</text>`;
     }
+
     candles.forEach((k, i) => {
         const [o, h, l, c] = k;
         if (lastOnlyOpen(i)) {
             // The opening price as a gold dash, labelled just above (or below, if it's at the top)
-            const labelY = y(o) < 20 ? y(o) + 18 : y(o) - 10;
-            parts += `<g class="dot-pop"><line x1="${f(x(i) - body)}" y1="${f(y(o))}" x2="${f(x(i) + body)}" y2="${f(y(o))}" stroke="var(--gold)" stroke-width="4" stroke-linecap="round"></line>
-                <text x="${f(x(i))}" y="${f(labelY)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="middle">open</text></g>`;
+            const labelY = y(o) < TOP + 14 ? y(o) + 16 : y(o) - 8;
+            parts += `<g class="dot-pop"><line x1="${f(x(i) - Math.max(body, 6))}" y1="${f(y(o))}" x2="${f(x(i) + Math.max(body, 6))}" y2="${f(y(o))}" stroke="var(--gold)" stroke-width="3" stroke-linecap="round"></line>
+                <text x="${f(x(i))}" y="${f(labelY)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="end">open</text></g>`;
             return;
         }
         const colour = c >= o ? "var(--up)" : "var(--down)";
         const top = y(Math.max(o, c));
-        const height = Math.max(1.5, Math.abs(y(o) - y(c)));
+        const height = Math.max(1, Math.abs(y(o) - y(c)));
+        const volH = volumes[i] / maxVol * (H - VOL_TOP);
         const cls = opts.popLast && i === n - 1 ? ' class="dot-pop"' : "";
-        parts += `<g${cls}><line x1="${f(x(i))}" y1="${f(y(h))}" x2="${f(x(i))}" y2="${f(y(l))}" stroke="${colour}" stroke-width="1.5"></line>
-            <rect x="${f(x(i) - body / 2)}" y="${f(top)}" width="${f(body)}" height="${f(height)}" rx="1.5" fill="${colour}"></rect></g>`;
+        parts += `<g${cls}>
+            <rect x="${f(x(i) - body / 2)}" y="${f(H - volH)}" width="${f(body)}" height="${f(volH)}" fill="${colour}" opacity="0.3"></rect>
+            <line x1="${f(x(i))}" y1="${f(y(h))}" x2="${f(x(i))}" y2="${f(y(l))}" stroke="${colour}" stroke-width="1"></line>
+            <rect x="${f(x(i) - body / 2)}" y="${f(top)}" width="${f(body)}" height="${f(height)}" fill="${colour}"></rect></g>`;
     });
-    if (opts.hover) {
-        parts += `<line class="hover-line" y1="0" y2="${H}" stroke="var(--text-soft)" stroke-width="1" visibility="hidden"></line>`;
+
+    // The last price, tagged on the scale like a trading platform
+    if (opts.axis) {
+        const last = candles[n - 1];
+        const colour = last[3] >= candles[n - 2][3] ? "var(--up)" : "var(--down)";
+        parts += `<rect x="${plotW + 2}" y="${f(y(last[3]) - 8)}" width="${AXIS - 2}" height="16" rx="3" fill="${colour}"></rect>
+            <text x="${W - 4}" y="${f(y(last[3]) + 4)}" fill="var(--bg)" font-family="Rubik, sans-serif" font-size="10" font-weight="700" text-anchor="end">${last[3].toFixed(2)}</text>`;
     }
 
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Daily price candles">${parts}</svg>`;
+    if (opts.hover) {
+        parts += `<line class="hover-line" y1="${TOP - 4}" y2="${H}" stroke="var(--text-soft)" stroke-width="1" stroke-dasharray="2 2" visibility="hidden"></line>`;
+    }
+
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily price candles">${parts}</svg>`;
     if (opts.hover) addChartHover(box, candles, x);
+}
+
+// A round gap between gridlines: 1, 2, 2.5 or 5 times a power of ten
+function niceStep(rough) {
+    const power = Math.pow(10, Math.floor(Math.log10(rough)));
+    const r = rough / power;
+    return power * (r < 1.5 ? 1 : r < 2.25 ? 2 : r < 3.5 ? 2.5 : r < 7.5 ? 5 : 10);
 }
 
 // Hover (or tap and drag on a phone) along the chart to see each day's prices
