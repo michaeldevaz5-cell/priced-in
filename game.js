@@ -126,25 +126,39 @@ function buildTape() {
 // A pixel-art skyline along the bottom (lit windows that flicker, blinking red lights
 // on the antennas) and a giant, faint candlestick chart drifting across the sky.
 // The candles are a random walk, purely decorative, not real prices.
-// As you climb the tower the city sinks below you, and the higher levels add
-// gold sparkles, a balcony railing, string lights and fireworks.
+// As you climb the tower, every level looks clearly different: the sky warms from night
+// to a gold sunset, the city drops a step further below you, and each level adds a touch
+// (see SKIES and the draw functions below).
 let homeChartFrame = null;
 
-// How high the scene is: "target" is your floor, "now" eases towards it so the city sinks smoothly.
-// rail / glitter / party fade the luxury touches in and out (0 = hidden, 1 = fully shown).
-const scene = { now: 0, target: 0, rail: 0, glitter: 0, party: 0, redraw: null };
+// Sky colours for each level of the tower: top of the screen, middle, horizon,
+// and the glow rising from behind the city [r, g, b, strength]
+const SKIES = [
+    ["#0b0f1c", "#111830", "#2b2236", [245, 196, 81, 0.16]],    // Street: deep night
+    ["#0a1224", "#142650", "#33386a", [130, 170, 255, 0.20]],   // Lobby: city lights, searchlights
+    ["#0e1838", "#22377a", "#5a5a9a", [140, 220, 180, 0.20]],   // Trading floor: blue hour
+    ["#181640", "#3e2f7a", "#9a5c8c", [255, 150, 120, 0.24]],   // Corner office: dusk
+    ["#1e1442", "#5a2f78", "#d0707a", [255, 140, 90, 0.30]],    // Boardroom: sunset
+    ["#23164a", "#7a3a72", "#f0a060", [255, 190, 90, 0.36]],    // Penthouse: golden hour
+    ["#2a1450", "#9a4070", "#ffcf6b", [255, 215, 120, 0.45]]    // Rooftop: gold
+].map(([top, mid, low, glow]) => ({ top: hexRgb(top), mid: hexRgb(mid), low: hexRgb(low), glow }));
+
+function hexRgb(hex) {
+    return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+}
+
+// Where the scene is: "now" (floor) and "lv" (level) ease towards their targets so the change
+// is smooth; fx[i] fades in the touch that level i adds (0 = hidden, 1 = fully shown).
+const scene = { now: 0, target: 0, lv: 0, lvTarget: 0, fx: [0, 0, 0, 0, 0, 0, 0], redraw: null };
 
 function setSceneFloor(f, instant) {
     scene.target = Math.min(f, TOP_FLOOR);
-    const level = levelIndex(f);
+    scene.lvTarget = levelIndex(f);
     if (instant || reduceMotion) {
         scene.now = scene.target;
-        scene.glitter = level >= 4 ? 1 : 0;
-        scene.rail = level >= 5 ? 1 : 0;
-        scene.party = level >= 6 ? 1 : 0;
+        scene.lv = scene.lvTarget;
+        scene.fx = scene.fx.map((_, i) => (scene.lvTarget >= i ? 1 : 0));
     }
-    // --lux (0 to 1) brightens the gold glow on the horizon (see .sky-glow in style.css)
-    document.body.style.setProperty("--lux", (level / (LEVELS.length - 1)).toFixed(2));
     if (reduceMotion && scene.redraw) scene.redraw();
 }
 
@@ -229,12 +243,104 @@ function startHomeChart() {
         }
     }
 
+    // The sky for the current level, blended smoothly into the next one while climbing
+    function drawSky() {
+        const i = Math.min(SKIES.length - 2, Math.floor(scene.lv));
+        const t = scene.lv - i;
+        const a = SKIES[i], b = SKIES[i + 1];
+        const mix = (p, q) => p.map((v, k) => Math.round(v + (q[k] - v) * t));
+        const rgb = (c) => `rgb(${c.join(",")})`;
+
+        const sky = ctx.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, rgb(mix(a.top, b.top)));
+        sky.addColorStop(0.55, rgb(mix(a.mid, b.mid)));
+        sky.addColorStop(1, rgb(mix(a.low, b.low)));
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, w, h);
+
+        const g = mix(a.glow.slice(0, 3), b.glow.slice(0, 3));
+        const strength = a.glow[3] + (b.glow[3] - a.glow[3]) * t;
+        const glow = ctx.createRadialGradient(w / 2, h, 0, w / 2, h, Math.max(w, h) * 0.75);
+        glow.addColorStop(0, `rgba(${g.join(",")}, ${strength.toFixed(3)})`);
+        glow.addColorStop(1, `rgba(${g.join(",")}, 0)`);
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, w, h);
+    }
+
+    // Lobby and above: two searchlights sweeping the sky from behind the city
+    function drawSearchlights(now) {
+        const L = h * 1.3;
+        const spread = Math.tan(0.05) * L;
+        [[0.22, 0], [0.78, 2.4]].forEach(([fx, phase]) => {
+            const angle = reduceMotion ? (phase ? 0.25 : -0.25) : Math.sin(now / 2600 + phase) * 0.45;
+            ctx.save();
+            ctx.translate(w * fx, h);
+            ctx.rotate(angle);
+            const beam = ctx.createLinearGradient(0, 0, 0, -L);
+            beam.addColorStop(0, `rgba(255, 240, 200, ${(0.16 * scene.fx[1]).toFixed(3)})`);
+            beam.addColorStop(1, "rgba(255, 240, 200, 0)");
+            ctx.fillStyle = beam;
+            ctx.beginPath();
+            ctx.moveTo(-PX, 0);
+            ctx.lineTo(-spread, -L);
+            ctx.lineTo(spread, -L);
+            ctx.lineTo(PX, 0);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+
+    // Trading floor and above: a pixel blimp drifting slowly across the sky
+    function drawBlimp(now) {
+        const span = w + PX * 60;
+        const x = Math.round((reduceMotion ? w * 0.62 : (now * 0.012) % span - PX * 30) / PX) * PX;
+        const y = Math.round(h * 0.16 / PX) * PX;
+        ctx.globalAlpha = scene.fx[2];
+        // The body, row by row, so it reads as a rounded pixel shape
+        [10, 16, 18, 18, 16, 10].forEach((cols, row) => {
+            ctx.fillStyle = row === 3 ? "#f5c451" : "#aeb5c4";
+            ctx.fillRect(x + (18 - cols) / 2 * PX, y + row * PX, cols * PX, PX);
+        });
+        ctx.fillStyle = "#7d8494";                                  // tail fins and the cabin
+        ctx.fillRect(x - PX * 2, y + PX, PX * 2, PX * 4);
+        ctx.fillRect(x + PX * 7, y + PX * 6, PX * 4, PX * 2);
+        if (reduceMotion || Math.sin(now / 450) > 0) {               // blinking light on the tail
+            ctx.fillStyle = "#f26d6d";
+            ctx.fillRect(x - PX * 3, y + PX * 2, PX, PX);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // Corner office and above: a helicopter crossing every so often
+    function drawHelicopter(now) {
+        const cycle = (now % 16000) / 16000;
+        if (!reduceMotion && cycle > 0.5) return;
+        const x = Math.round((reduceMotion ? w * 0.3 : w + PX * 20 - cycle * 2 * (w + PX * 40)) / PX) * PX;
+        const y = Math.round((h * 0.3 + (reduceMotion ? 0 : Math.sin(now / 600) * PX * 2)) / PX) * PX;
+        ctx.globalAlpha = scene.fx[3];
+        ctx.fillStyle = "#1c2230";
+        ctx.fillRect(x, y, PX * 6, PX * 3);                   // body
+        ctx.fillRect(x + PX * 6, y + PX, PX * 6, PX);         // tail
+        ctx.fillRect(x + PX * 2, y - PX, PX, PX);             // rotor mast
+        ctx.fillStyle = "#9fb3c8";
+        ctx.fillRect(x + PX, y + PX, PX * 2, PX);             // window
+        ctx.fillStyle = "#2c3446";                            // spinning rotor: long, then short
+        const long = reduceMotion || Math.floor(now / 60) % 2 === 0;
+        ctx.fillRect(x + (long ? -PX * 3 : PX), y - PX * 2, long ? PX * 12 : PX * 4, PX);
+        if (reduceMotion || Math.sin(now / 300) > 0.4) {
+            ctx.fillStyle = "#f26d6d";
+            ctx.fillRect(x + PX * 11, y, PX, PX);
+        }
+        ctx.globalAlpha = 1;
+    }
+
     // A gold balcony railing along the bottom of the screen (Penthouse and above).
-    // It slides up into view as scene.rail goes from 0 to 1.
+    // It slides up into view as its fade goes from 0 to 1.
     function drawRailing(now) {
+        const shown = scene.fx[5];
         const railH = PX * 16;
-        const top = Math.round((h - railH + (1 - scene.rail) * railH * 1.5) / PX) * PX;
-        ctx.globalAlpha = scene.rail;
+        const top = Math.round((h - railH + (1 - shown) * railH * 1.5) / PX) * PX;
+        ctx.globalAlpha = shown;
         ctx.fillStyle = "#1a1422";                           // dark marble floor
         ctx.fillRect(0, top + railH - PX * 3, w, PX * 3);
         ctx.fillStyle = "#a9822b";                           // posts
@@ -246,8 +352,8 @@ function startHomeChart() {
         ctx.fillRect(0, top + PX, w, 1);
 
         // Rooftop: a string of warm bulbs above the rail
-        if (scene.party > 0) {
-            ctx.globalAlpha = scene.party;
+        if (scene.fx[6] > 0.01) {
+            ctx.globalAlpha = scene.fx[6];
             for (let x = PX * 4, i = 0; x < w; x += PX * 8, i++) {
                 const sag = Math.round(Math.sin((x / w) * Math.PI * 6) * PX) - PX * 6;
                 const on = reduceMotion || Math.sin(now / 400 + i) > -0.6;
@@ -270,7 +376,7 @@ function startHomeChart() {
         bursts.forEach(b => {
             const t = (now - b.start) / 1400;
             const r = 8 + t * 60;
-            ctx.fillStyle = `rgba(${b.colour}, ${(0.8 * (1 - t) * scene.party).toFixed(3)})`;
+            ctx.fillStyle = `rgba(${b.colour}, ${(0.8 * (1 - t) * scene.fx[6]).toFixed(3)})`;
             for (let i = 0; i < 14; i++) {
                 const a = (i / 14) * Math.PI * 2;
                 const px = Math.round((b.x + Math.cos(a) * r) / PX) * PX;
@@ -312,24 +418,25 @@ function startHomeChart() {
             candles.push(nextCandle(candles[candles.length - 1]));
         }
 
-        // Ease towards the current floor and fade the luxury touches in or out
+        // Ease towards the current floor and level, and fade each level's touch in or out
         const ease = Math.min(1, dt * 0.0025);
         scene.now += (scene.target - scene.now) * ease;
-        const level = levelIndex(Math.round(scene.now));
-        scene.glitter += ((level >= 4 ? 1 : 0) - scene.glitter) * ease;
-        scene.rail += ((level >= 5 ? 1 : 0) - scene.rail) * ease;
-        scene.party += ((level >= 6 ? 1 : 0) - scene.party) * ease;
-        // The higher you are, the further the city sinks below you
-        const sink = Math.round(scene.now / TOP_FLOOR * h * 0.28 / PX) * PX;
+        scene.lv += (scene.lvTarget - scene.lv) * ease;
+        scene.fx = scene.fx.map((v, i) => v + ((scene.lvTarget >= i ? 1 : 0) - v) * ease);
+        // Each level drops the city a clear step further below you (plus a little per floor)
+        // (at most ~22% of the screen, so the tallest rooftops still peek up on the Rooftop level)
+        const sink = Math.round((scene.lv / (LEVELS.length - 1) * 0.19 + scene.now / TOP_FLOOR * 0.03) * h / PX) * PX;
 
-        ctx.clearRect(0, 0, w, h);
+        drawSky();
 
-        // Stars get brighter as you climb above the city lights
-        const starBoost = 0.1 * scene.now / TOP_FLOOR;
+        // Stars fade as the sky gets lighter
+        const starLight = 1 - 0.85 * scene.lv / (LEVELS.length - 1);
         stars.forEach(st => {
-            ctx.fillStyle = `rgba(242, 244, 247, ${0.15 + starBoost + 0.15 * Math.sin(now / 900 + st.phase)})`;
+            ctx.fillStyle = `rgba(242, 244, 247, ${((0.15 + 0.15 * Math.sin(now / 900 + st.phase)) * starLight).toFixed(3)})`;
             ctx.fillRect(st.x, st.y, 2, 2);
         });
+
+        if (scene.fx[1] > 0.01) drawSearchlights(now);
 
         // Heights stay on the pixel grid, but the sideways drift is smooth (no snapping),
         // and candles fade in at the right edge and out at the left
@@ -345,7 +452,9 @@ function startHomeChart() {
             ctx.fillRect(x, snap(Math.min(c.open, c.close)), CW, Math.max(PX, snap(Math.abs(c.close - c.open))));
         });
 
-        if (scene.party > 0.01) drawFireworks(now);
+        if (scene.fx[2] > 0.01) drawBlimp(now);
+        if (scene.fx[3] > 0.01) drawHelicopter(now);
+        if (scene.fx[6] > 0.01) drawFireworks(now);
 
         ctx.drawImage(skyline, 0, sink, w, h);
 
@@ -364,19 +473,19 @@ function startHomeChart() {
         });
 
         // Boardroom and above: gold dust drifting up through the scene
-        if (scene.glitter > 0.01) {
+        if (scene.fx[4] > 0.01) {
             sparkles.forEach(sp => {
                 if (!reduceMotion) {
                     sp.y -= dt * sp.speed;
                     if (sp.y < -PX) { sp.y = h + PX; sp.x = Math.random() * w; }
                 }
                 const twinkle = 0.5 + 0.5 * Math.sin(now / 300 + sp.phase);
-                ctx.fillStyle = `rgba(245, 196, 81, ${(0.55 * twinkle * scene.glitter).toFixed(3)})`;
+                ctx.fillStyle = `rgba(245, 196, 81, ${(0.55 * twinkle * scene.fx[4]).toFixed(3)})`;
                 ctx.fillRect(Math.round(sp.x / PX) * PX, Math.round(sp.y / PX) * PX, PX - 1, PX - 1);
             });
         }
 
-        if (scene.rail > 0.01) drawRailing(now);
+        if (scene.fx[5] > 0.01) drawRailing(now);
 
         if (!reduceMotion) homeChartFrame = requestAnimationFrame(draw);
     }
