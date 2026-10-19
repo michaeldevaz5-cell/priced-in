@@ -15,6 +15,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 | 5 | Microsoft, Jan 2026 | ✅ In `puzzles.json`, with `candles` (opened −8.6%, closed −10.0%: $481.63 → $433.50) |
 | 6 | Tesla, Apr 2024 | Dropped: open +12.6% vs close +12.1%, so the exit choice doesn't matter. Replaced by Tesla Oct 2024 (✅ in `puzzles.json`: opened +14.5%, closed +21.9%, $213.65 → $260.48) |
 | 14 | Netflix, Jan 2025 | ✅ In `puzzles.json`, with `candles` (opened +14.8%, closed +9.7%: $869.68 → $953.99, pre-split prices) |
+| 15 | Meta, Oct 2024 | ✅ In `puzzles.json`, with `candles` (opened −1.1%, closed −4.1%: $591.80 → $567.58) |
 | 7 | Oracle, Sep 2025 | ✅ In `puzzles.json`, with `candles` (opened +32.2%, closed +36.0%: $241.51 → $328.33) |
 | 8 | Nvidia, Feb 2026 | ✅ In `puzzles.json`, with `candles` (opened −0.7%, closed −5.5%: $195.56 → $184.89) |
 | 9 | Meta, Feb 2024 (control) | ✅ In `puzzles.json`, with `candles` (opened +16.4%, closed +20.3%: $394.78 → $474.99) |

@@ -113,7 +113,7 @@ Before saying a change works:
 
 ## Current state (19 Oct 2026)
 
-- **Cards:** 14 so far, in `puzzles.json`:
+- **Cards:** 15 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -128,8 +128,9 @@ Before saying a change works:
   - Amazon, Feb 2024: has `candles`; control (good news → up); opened +6.2%, closed +7.9%; the revenue forecast straddled consensus, so it isn't called a beat; `otherNews` drafted by Claude, disguise changed from "e-commerce" and "accelerating" ad growth changed to "strong" at Michael's request
   - Tesla, Oct 2024: has `candles`; revenue missed, EPS and margins beat, rose 21.9% (best day in a decade); opened +14.5%, so holding paid off; `otherNews` drafted by Claude, disguise changed from "clean energy and autonomous mobility" at Michael's request
   - Netflix, Jan 2025: has `candles` (×10 for the Nov 2025 split); beat on everything, opened +14.8% but closed +9.7%, so exiting at the open paid off; `otherNews` drafted by Claude; unsupported "conservative guidance" dropped from `why` at Michael's request (the full-year forecast was raised)
+  - Meta, Oct 2024: has `candles`; third Meta card; beat but fell 4.1% on an AI-spending warning; opened −1.1%, so holding a short paid off; `otherNews` drafted by Claude, disguise changed from "metaverse pioneer" at Michael's request
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
-- **Next: 3 cards for Fri 30 Oct, then 15 for week 2 (2–6 Nov).** Michael is writing 4 (19 Oct): Tesla Oct 2024 (done), Netflix Jan 2025 (done), Meta Oct 2024 (or Microsoft Apr 2024), plus one for week 2. Tesla Apr 2024 was dropped: its open and close were almost the same. Pick days where the open and close differ a lot.
+- **Launch week (26–30 Oct) is full: 15 cards.** Next: 15 for week 2 (2–6 Nov). Michael planned 4 cards on 19 Oct (Tesla, Netflix, Meta done; 1 more for week 2). Tesla Apr 2024 was dropped: its open and close were almost the same. Pick days where the open and close differ a lot.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
 - **Friend test:** done 18 Oct 2026. Friends wanted to trade the reaction rather than call it, so the game switched to trading the same day. A minute-by-minute replay was considered but needs licensed intraday data; not planned.
-- **Daily mode built 17 Oct 2026:** 3 cards a weekday from Mon 26 Oct (15 a week), weekly portfolio, Week tab, Practice. With 12 cards, launch week covers Mon 26 – Thu 29 Oct; **Fri 30 Oct needs 3 more cards**, and each week after needs 15, or Today says "New cards coming soon". The plan from 6 Nov is a weekly job that drafts cards as a pull request for Michael to edit and approve. Before 26 Oct, the game opens on Practice.
+- **Daily mode built 17 Oct 2026:** 3 cards a weekday from Mon 26 Oct (15 a week), weekly portfolio, Week tab, Practice. With 15 cards, launch week (Mon 26 – Fri 30 Oct) is full; each week after needs 15, or Today says "New cards coming soon". The plan from 6 Nov is a weekly job that drafts cards as a pull request for Michael to edit and approve. Before 26 Oct, the game opens on Practice.
