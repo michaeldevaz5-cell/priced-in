@@ -13,6 +13,8 @@
 <body>
     <!-- The gold price line that keeps drawing itself behind everything -->
     <canvas id="bg-chart" class="bg-chart" aria-hidden="true"></canvas>
+    <!-- Gold glow on the horizon that gets stronger the higher up the tower you are -->
+    <div id="sky-glow" class="sky-glow" aria-hidden="true"></div>
 
     <!-- ============ HOME ============ -->
     <div id="home" class="home">
@@ -45,6 +47,7 @@
                     <li>Before the results come out, <strong>buy</strong> (you make money if the price rises), <strong>short</strong> (you make money if it falls) or stay out. Put 10%, 25% or 50% of your portfolio on it.</li>
                     <li>The next morning the market opens. Take your profit or loss <strong>at the open</strong>, or <strong>hold to the close</strong>. Your profit or loss is the real price move on your position.</li>
                     <li>Three new cards every weekday. Your portfolio carries over from day to day and starts again at $10,000 every Monday.</li>
+                    <li>Climb the tower: every trade that makes money takes you up a floor, and every loss takes you down one. The higher you go, the fancier it gets. Back to the street every Monday.</li>
                     <li>The catch: good news doesn't always mean up. Prices move on <em>surprise</em>, not on whether the news sounds good.</li>
                 </ol>
             </details>
@@ -70,6 +73,8 @@
             <div class="hud-progress">
                 <div id="squares" class="squares" aria-hidden="true"></div>
                 <span id="progress" class="hud-label"></span>
+                <!-- Elevator display: which floor of the tower you're on -->
+                <div id="floor" class="floor" role="status"></div>
             </div>
 
             <div class="hud-box hud-right">
@@ -281,6 +286,9 @@
 
     <!-- Full-screen colour flash on the reveal -->
     <div id="flash" class="flash" aria-hidden="true"></div>
+
+    <!-- Banner when you reach a new level of the tower -->
+    <div id="floor-toast" class="floor-toast" aria-live="polite"></div>
 
     <script src="game.js"></script>
 </body>

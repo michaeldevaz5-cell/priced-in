@@ -4,7 +4,7 @@ A game about how markets react to news. Each card is a real company results day,
 
 The lesson running through it: prices move on **surprise versus expectations**, not on whether the news sounds good.
 
-**Three new cards every weekday.** Your portfolio carries over from day to day and resets to $10,000 every Monday. The Week tab shows each day's result, a graph of your portfolio and your stats. Practice plays every card in one go.
+**Three new cards every weekday.** Your portfolio carries over from day to day and resets to $10,000 every Monday. Every trade that makes money takes you up a floor of the tower, every loss down one, and the higher floors get more luxurious. The Week tab shows each day's result, a graph of your portfolio and your stats. Practice plays every card in one go.
 
 **Play:** https://michaeldevaz5-cell.github.io/priced-in
 

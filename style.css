@@ -72,6 +72,20 @@ body::before {
 
 body.in-game .bg-chart { opacity: 0.7; }
 
+/* Gold glow on the horizon and a richer sky, stronger the higher up the tower you are.
+   game.js sets --lux from 0 (street) to 1 (rooftop). Behind the city canvas. */
+.sky-glow {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 130% 55% at 50% 100%, rgba(245, 196, 81, 0.30), transparent 70%),
+        linear-gradient(to bottom, rgba(70, 45, 110, 0.35), transparent 60%);
+    opacity: var(--lux, 0);
+    transition: opacity 1.6s ease;
+}
+
 /* ---------- Home ---------- */
 .home {
     position: relative;
@@ -330,6 +344,96 @@ body.in-game .bg-chart { opacity: 0.7; }
 .squares i.now { background: var(--gold); border-color: var(--gold); }
 .squares i.hit { background: var(--up); border-color: var(--up); }
 .squares i.miss { background: var(--down); border-color: var(--down); }
+
+/* ---------- The tower: elevator display in the top bar ---------- */
+/* Each level (data-level 0–6) looks a little more luxurious than the one below */
+.floor {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: var(--raised);
+    box-shadow: 0 2px 0 var(--edge);
+    font-family: var(--pixel);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    white-space: nowrap;
+    transition: background 0.6s ease, color 0.6s ease, box-shadow 0.6s ease;
+}
+.floor-num { min-width: 2ch; text-align: center; font-weight: 700; color: var(--text); }
+.floor-name { text-transform: uppercase; }
+
+.floor[data-level="1"] { color: var(--text-soft); }                          /* Lobby */
+.floor[data-level="2"] { color: var(--up); }                                 /* Trading floor */
+.floor[data-level="3"] {                                                     /* Corner office */
+    color: var(--gold);
+    box-shadow: inset 0 0 0 1px var(--gold-edge), 0 2px 0 var(--edge);
+}
+.floor[data-level="4"] {                                                     /* Boardroom */
+    color: var(--gold);
+    background: linear-gradient(to bottom, #2c2410, #1a1508);
+    box-shadow: inset 0 0 0 1px var(--gold), 0 2px 0 var(--edge), 0 0 12px rgba(245, 196, 81, 0.25);
+}
+.floor[data-level="4"] .floor-num { color: var(--gold); }
+.floor[data-level="5"],                                                      /* Penthouse */
+.floor[data-level="6"] {                                                     /* Rooftop */
+    color: #2a1d04;
+    background: linear-gradient(to bottom, #f8d77a, #c99a35);
+    box-shadow: 0 2px 0 var(--gold-edge), 0 0 16px rgba(245, 196, 81, 0.4);
+}
+.floor[data-level="5"] .floor-num,
+.floor[data-level="6"] .floor-num { color: #2a1d04; }
+.floor[data-level="6"] {
+    background: linear-gradient(110deg, #c99a35 20%, #fff1c2 40%, #f5c451 60%, #c99a35 80%);
+    background-size: 250% 100%;
+    animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+
+/* The elevator moving: a bounce up with a green glow, or a drop with a red one */
+.floor.floor-up { animation: floor-up 0.8s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.floor.floor-down { animation: floor-down 0.6s ease-out; }
+@keyframes floor-up {
+    0% { transform: translateY(8px) scale(0.9); }
+    50% { transform: translateY(-4px) scale(1.15); box-shadow: 0 0 0 3px var(--up), 0 0 18px var(--up); }
+    100% { transform: none; }
+}
+@keyframes floor-down {
+    0% { transform: translateY(-8px); }
+    40% { transform: translateY(3px); box-shadow: 0 0 0 3px var(--down), 0 0 14px var(--down); }
+    100% { transform: none; }
+}
+
+/* Banner when you reach a new level */
+.floor-toast {
+    position: fixed;
+    left: 50%;
+    top: 96px;
+    z-index: 6;
+    transform: translateX(-50%);
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--gold-edge);
+    background: rgba(13, 17, 23, 0.94);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 24px rgba(245, 196, 81, 0.2);
+    font-family: var(--pixel);
+    font-size: 18px;
+    color: var(--gold);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+}
+.floor-toast.is-down { color: var(--down); border-color: var(--down-edge); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); }
+.floor-toast.show { animation: toast 2.6s ease-out forwards; }
+@keyframes toast {
+    0% { opacity: 0; transform: translate(-50%, 12px) scale(0.9); }
+    12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); }
+    20% { transform: translate(-50%, 0) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -8px); }
+}
 
 .stage {
     flex-grow: 1;
@@ -796,6 +900,12 @@ code {
     .hud-box { min-width: 0; padding: 6px 10px; }
     .hud-value { font-size: 15px; }
     .squares i { width: 12px; height: 12px; }
+    /* A long practice round wraps onto a second row (8 squares a row) instead of
+       running under the Portfolio and Return boxes */
+    .squares { flex-wrap: wrap; justify-content: center; max-width: 124px; }
+    .hud-progress { gap: 4px; }
+    .floor { font-size: 9px; padding: 2px 6px; gap: 4px; }
+    .floor-toast { top: 84px; font-size: 15px; }
     .stage { padding: 18px 10px 16px; }
     .panel-main { padding: 22px 18px 18px; }
     .stats { gap: 6px; }
@@ -816,4 +926,9 @@ code {
     .flash { display: none; }
     .tape-track { animation: none; }
     .home-kicker, .home-title, .home-sub, .home-chips, .btn-start, .howto { animation: none; }
+    .floor.floor-up, .floor.floor-down, .floor[data-level="6"] { animation: none; }
+    .sky-glow { transition: none; }
+    /* The level banner still appears, but fades in place instead of moving */
+    .floor-toast.show { animation: toast-fade 2.6s linear forwards; }
 }
+@keyframes toast-fade { 0%, 100% { opacity: 0; } 10%, 85% { opacity: 1; } }

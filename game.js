@@ -12,6 +12,20 @@ const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
 const DAILY_START = "2026-10-26";  // the Monday the first daily cards go live
 const CARDS_PER_DAY = 3;           // daily cards come from puzzles.json in order, 3 per weekday
 
+// The tower: a trade that makes money takes you up a floor, a loss takes you down one
+// (never below the street). The climb starts again every Monday, like the portfolio.
+// Each level looks a little more luxurious than the one below.
+const LEVELS = [
+    { from: 0, name: "Street" },
+    { from: 1, name: "Lobby" },
+    { from: 3, name: "Trading floor" },
+    { from: 5, name: "Corner office" },
+    { from: 8, name: "Boardroom" },
+    { from: 11, name: "Penthouse" },
+    { from: 14, name: "Rooftop" }
+];
+const TOP_FLOOR = 15;              // a week has 15 cards, so 15 floors is the most you can climb
+
 // ---------- Game state (the game's "memory") ----------
 let puzzles = [];            // every card from puzzles.json
 let mode = "practice";       // "daily" (today's cards) or "practice" (every card)
@@ -20,6 +34,7 @@ let dailyKey = null;         // the day being played in daily mode, e.g. "2026-1
 let cardIndex = 0;           // which card of the deck we're on (0 = first)
 let portfolio = START_VALUE; // current portfolio value in dollars
 let results = [];            // one entry per finished card
+let floor = 0;               // how high up the tower you are (0 = the street)
 
 // Shortcut: find an element by its id
 const $ = (id) => document.getElementById(id);
@@ -76,6 +91,8 @@ function showHome() {
         ? `Rounds played ${stats.played} · Best ${money(stats.bestValue)} · Streak ${stats.streak}`
         : "";
 
+    // The city starts at this week's floor of the tower
+    setSceneFloor(weekFloor(loadWeek()), true);
     buildTape();
     if (!homeChartFrame) startHomeChart();
     window.scrollTo(0, 0);
@@ -109,7 +126,27 @@ function buildTape() {
 // A pixel-art skyline along the bottom (lit windows that flicker, blinking red lights
 // on the antennas) and a giant, faint candlestick chart drifting across the sky.
 // The candles are a random walk, purely decorative, not real prices.
+// As you climb the tower the city sinks below you, and the higher levels add
+// gold sparkles, a balcony railing, string lights and fireworks.
 let homeChartFrame = null;
+
+// How high the scene is: "target" is your floor, "now" eases towards it so the city sinks smoothly.
+// rail / glitter / party fade the luxury touches in and out (0 = hidden, 1 = fully shown).
+const scene = { now: 0, target: 0, rail: 0, glitter: 0, party: 0, redraw: null };
+
+function setSceneFloor(f, instant) {
+    scene.target = Math.min(f, TOP_FLOOR);
+    const level = levelIndex(f);
+    if (instant || reduceMotion) {
+        scene.now = scene.target;
+        scene.glitter = level >= 4 ? 1 : 0;
+        scene.rail = level >= 5 ? 1 : 0;
+        scene.party = level >= 6 ? 1 : 0;
+    }
+    // --lux (0 to 1) brightens the gold glow on the horizon (see .sky-glow in style.css)
+    document.body.style.setProperty("--lux", (level / (LEVELS.length - 1)).toFixed(2));
+    if (reduceMotion && scene.redraw) scene.redraw();
+}
 
 function startHomeChart() {
     const canvas = $("bg-chart");
@@ -122,6 +159,9 @@ function startHomeChart() {
     let lights = [];                  // red antenna lights
     let stars = [];
     let candles = [];
+    let sparkles = [];                // gold dust drifting up (Boardroom and above)
+    let bursts = [];                  // fireworks (Rooftop)
+    let nextBurst = 0;
     let offset = 0;
     let last = performance.now();
 
@@ -182,6 +222,62 @@ function startHomeChart() {
         for (let i = 0; i < 60; i++) {
             stars.push({ x: Math.floor(rand() * w / PX) * PX, y: Math.floor(rand() * h * 0.5 / PX) * PX, phase: rand() * 6 });
         }
+
+        sparkles = [];
+        for (let i = 0; i < 36; i++) {
+            sparkles.push({ x: rand() * w, y: rand() * h, speed: 0.008 + rand() * 0.02, phase: rand() * 6 });
+        }
+    }
+
+    // A gold balcony railing along the bottom of the screen (Penthouse and above).
+    // It slides up into view as scene.rail goes from 0 to 1.
+    function drawRailing(now) {
+        const railH = PX * 16;
+        const top = Math.round((h - railH + (1 - scene.rail) * railH * 1.5) / PX) * PX;
+        ctx.globalAlpha = scene.rail;
+        ctx.fillStyle = "#1a1422";                           // dark marble floor
+        ctx.fillRect(0, top + railH - PX * 3, w, PX * 3);
+        ctx.fillStyle = "#a9822b";                           // posts
+        for (let x = PX * 2; x < w; x += PX * 6) ctx.fillRect(x, top + PX * 3, PX, railH - PX * 6);
+        ctx.fillRect(0, top + railH - PX * 5, w, PX);         // bottom rail
+        ctx.fillStyle = "#f5c451";                           // polished top rail
+        ctx.fillRect(0, top + PX, w, PX * 2);
+        ctx.fillStyle = "rgba(255, 240, 200, 0.6)";
+        ctx.fillRect(0, top + PX, w, 1);
+
+        // Rooftop: a string of warm bulbs above the rail
+        if (scene.party > 0) {
+            ctx.globalAlpha = scene.party;
+            for (let x = PX * 4, i = 0; x < w; x += PX * 8, i++) {
+                const sag = Math.round(Math.sin((x / w) * Math.PI * 6) * PX) - PX * 6;
+                const on = reduceMotion || Math.sin(now / 400 + i) > -0.6;
+                ctx.fillStyle = on ? (i % 2 ? "#ffe9a8" : "#f5c451") : "#6b5523";
+                ctx.fillRect(x, top + sag, PX, PX);
+            }
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // Rooftop fireworks: a small pixel burst in the sky every few seconds
+    function drawFireworks(now) {
+        if (reduceMotion) return;
+        if (now > nextBurst) {
+            nextBurst = now + 2500 + Math.random() * 2500;
+            bursts.push({ x: w * (0.15 + Math.random() * 0.7), y: h * (0.1 + Math.random() * 0.3), start: now,
+                colour: Math.random() < 0.6 ? "245, 196, 81" : "76, 195, 138" });
+        }
+        bursts = bursts.filter(b => now - b.start < 1400);
+        bursts.forEach(b => {
+            const t = (now - b.start) / 1400;
+            const r = 8 + t * 60;
+            ctx.fillStyle = `rgba(${b.colour}, ${(0.8 * (1 - t) * scene.party).toFixed(3)})`;
+            for (let i = 0; i < 14; i++) {
+                const a = (i / 14) * Math.PI * 2;
+                const px = Math.round((b.x + Math.cos(a) * r) / PX) * PX;
+                const py = Math.round((b.y + Math.sin(a) * r + t * t * 20) / PX) * PX;
+                ctx.fillRect(px, py, PX, PX);
+            }
+        });
     }
 
     // The sky chart: wide, faint candles in the top half of the screen
@@ -216,10 +312,22 @@ function startHomeChart() {
             candles.push(nextCandle(candles[candles.length - 1]));
         }
 
+        // Ease towards the current floor and fade the luxury touches in or out
+        const ease = Math.min(1, dt * 0.0025);
+        scene.now += (scene.target - scene.now) * ease;
+        const level = levelIndex(Math.round(scene.now));
+        scene.glitter += ((level >= 4 ? 1 : 0) - scene.glitter) * ease;
+        scene.rail += ((level >= 5 ? 1 : 0) - scene.rail) * ease;
+        scene.party += ((level >= 6 ? 1 : 0) - scene.party) * ease;
+        // The higher you are, the further the city sinks below you
+        const sink = Math.round(scene.now / TOP_FLOOR * h * 0.28 / PX) * PX;
+
         ctx.clearRect(0, 0, w, h);
 
+        // Stars get brighter as you climb above the city lights
+        const starBoost = 0.1 * scene.now / TOP_FLOOR;
         stars.forEach(st => {
-            ctx.fillStyle = `rgba(242, 244, 247, ${0.15 + 0.15 * Math.sin(now / 900 + st.phase)})`;
+            ctx.fillStyle = `rgba(242, 244, 247, ${0.15 + starBoost + 0.15 * Math.sin(now / 900 + st.phase)})`;
             ctx.fillRect(st.x, st.y, 2, 2);
         });
 
@@ -237,28 +345,46 @@ function startHomeChart() {
             ctx.fillRect(x, snap(Math.min(c.open, c.close)), CW, Math.max(PX, snap(Math.abs(c.close - c.open))));
         });
 
-        ctx.drawImage(skyline, 0, 0, w, h);
+        if (scene.party > 0.01) drawFireworks(now);
+
+        ctx.drawImage(skyline, 0, sink, w, h);
 
         // Flickering windows and blinking antenna lights
         windows.forEach(win => {
             if (Math.random() < 0.002) win.on = !win.on;
             if (!win.on) return;
             ctx.fillStyle = "rgba(245, 196, 81, 0.7)";
-            ctx.fillRect(win.x, win.y, PX, PX);
+            ctx.fillRect(win.x, win.y + sink, PX, PX);
         });
         lights.forEach(l => {
             if (Math.sin(now / 500 + l.phase) > 0.3) {
                 ctx.fillStyle = "rgba(242, 109, 109, 0.9)";
-                ctx.fillRect(l.x - 1, l.y, PX + 2, PX);
+                ctx.fillRect(l.x - 1, l.y + sink, PX + 2, PX);
             }
         });
+
+        // Boardroom and above: gold dust drifting up through the scene
+        if (scene.glitter > 0.01) {
+            sparkles.forEach(sp => {
+                if (!reduceMotion) {
+                    sp.y -= dt * sp.speed;
+                    if (sp.y < -PX) { sp.y = h + PX; sp.x = Math.random() * w; }
+                }
+                const twinkle = 0.5 + 0.5 * Math.sin(now / 300 + sp.phase);
+                ctx.fillStyle = `rgba(245, 196, 81, ${(0.55 * twinkle * scene.glitter).toFixed(3)})`;
+                ctx.fillRect(Math.round(sp.x / PX) * PX, Math.round(sp.y / PX) * PX, PX - 1, PX - 1);
+            });
+        }
+
+        if (scene.rail > 0.01) drawRailing(now);
 
         if (!reduceMotion) homeChartFrame = requestAnimationFrame(draw);
     }
 
     stopHomeChart();
     resize();
-    window.onresize = resize;
+    window.onresize = () => { resize(); if (reduceMotion) requestAnimationFrame(draw); };
+    scene.redraw = () => requestAnimationFrame(draw);
     homeChartFrame = requestAnimationFrame(draw);
 }
 
@@ -375,6 +501,84 @@ function addToHistory(week) {
 }
 
 
+// ---------- The tower ----------
+// Your floor isn't saved anywhere: it's worked out from the trades already played,
+// so it can never disagree with your results.
+
+// One step per card: up for a profit, down for a loss, nothing for staying out or breaking even
+const floorStep = (r) => (r.pnl > 0 ? 1 : r.pnl < 0 ? -1 : 0);
+
+// Walk up and down the tower, card by card, never going below the street
+function floorAfter(list) {
+    return list.reduce((f, r) => Math.max(0, f + floorStep(r)), 0);
+}
+
+// This week's floor, from every card played this week in order
+function weekFloor(week) {
+    return floorAfter(playedDays(week).flatMap(key => week.days[key].results));
+}
+
+// Which level a floor is on (0 = Street ... 6 = Rooftop)
+function levelIndex(f) {
+    let index = 0;
+    LEVELS.forEach((level, i) => { if (f >= level.from) index = i; });
+    return index;
+}
+
+const levelName = (f) => LEVELS[levelIndex(f)].name;
+// "Floor 4 · Trading floor" (the street has no number)
+const floorText = (f) => (f === 0 ? "Street level" : `Floor ${f} · ${levelName(f)}`);
+// For sentences: "on floor 4, the trading floor"
+const floorPhrase = (f) => (f === 0 ? "at street level" : `on floor ${f}, the ${levelName(f).toLowerCase()}`);
+
+// The elevator display in the top bar, e.g. "04 Trading floor"
+function showFloor() {
+    const box = $("floor");
+    box.innerHTML = "";
+    box.appendChild(cell("span", f2(floor), "floor-num"));
+    box.appendChild(cell("span", levelName(floor), "floor-name"));
+    box.dataset.level = levelIndex(floor);
+    box.setAttribute("aria-label", floorText(floor));
+}
+
+// Floor numbers in the elevator display: 0 → "G" (ground), 4 → "04"
+const f2 = (f) => (f === 0 ? "G" : String(f).padStart(2, "0"));
+
+// After a reveal: the elevator moves one floor, the city sinks or rises, and reaching
+// a new level gets a banner. Waits until the profit or loss has finished counting.
+let climbTimer = null;
+let pendingClimb = null;
+
+function climb(from, to) {
+    finishClimb();
+    if (from === to) return;
+    const go = () => {
+        pendingClimb = null;
+        showFloor();
+        replayAnimation($("floor"), to > from ? "floor-up" : "floor-down");
+        setSceneFloor(to);
+        const newLevel = levelIndex(to), oldLevel = levelIndex(from);
+        if (newLevel !== oldLevel) {
+            const toast = $("floor-toast");
+            toast.textContent = newLevel > oldLevel ? `▲ ${LEVELS[newLevel].name}` : `▼ Back to the ${LEVELS[newLevel].name.toLowerCase()}`;
+            toast.className = "floor-toast " + (newLevel > oldLevel ? "is-up" : "is-down");
+            replayAnimation(toast, "show");
+        }
+    };
+    if (reduceMotion) go();
+    else {
+        pendingClimb = go;
+        climbTimer = setTimeout(go, 2600);
+    }
+}
+
+// If the player moves on before the elevator has moved, move it now
+function finishClimb() {
+    clearTimeout(climbTimer);
+    if (pendingClimb) pendingClimb();
+}
+
+
 // ---------- 3. The menu: Today, Week and Practice tabs ----------
 let currentTab = "today";
 
@@ -398,6 +602,10 @@ function showHub(tab) {
     showReturn();
     showSquares();
     $("progress").textContent = deck.length ? "Today" : isWeekend(key) ? "Market closed" : "No new cards";
+    finishClimb();
+    floor = weekFloor(week);
+    showFloor();
+    setSceneFloor(floor);
 
     // Show the screen first, so the week graph can measure its width
     showOnly(tab);
@@ -628,6 +836,7 @@ function showWeek(key, week) {
         const worst = all.reduce((a, b) => (b.pnl < a.pnl ? b : a));
         const biggest = all.reduce((a, b) => (b.stake > a.stake ? b : a));
         const trades = all.filter(r => r.side !== "out");
+        addStat(stats, "Tower", floorText(weekFloor(week)), "gold");
         addStat(stats, "Right way round", `${trades.filter(r => r.dirRight).length} of ${trades.length}`);
         addStat(stats, "Better exit", `${trades.filter(r => r.timingRight).length} of ${trades.length}`);
         addStat(stats, "Biggest trade", `${money(biggest.stake)} · ${biggest.company}`);
@@ -717,6 +926,10 @@ function startRound() {
     portfolio = START_VALUE;
     $("portfolio").textContent = money(portfolio);
     showReturn();
+    finishClimb();
+    floor = 0;           // a practice round climbs its own tower from the street
+    showFloor();
+    setSceneFloor(floor);
     showCard();
 }
 
@@ -738,6 +951,9 @@ function startDaily() {
     portfolio = dayEnd(day);
     $("portfolio").textContent = money(portfolio);
     showReturn();
+    floor = weekFloor(week);
+    showFloor();
+    setSceneFloor(floor);
     if (cardIndex >= deck.length) { showHub("today"); return; }
     showCard();
     if (day.pending && day.pending.id === deck[cardIndex].id) {
@@ -769,6 +985,7 @@ function showSquares() {
 function showCard() {
     const puzzle = deck[cardIndex];
     trade = null;
+    finishClimb();
 
     $("progress").textContent = `Card ${cardIndex + 1} of ${deck.length}`;
     $("when").textContent = puzzle.when;
@@ -971,6 +1188,8 @@ function finishTrade(t, exit) {
 
     const before = portfolio;
     portfolio += pnl;
+    const floorBefore = floor;
+    floor = Math.max(0, floor + floorStep(result));
 
     // Daily results are saved straight away, so leaving halfway through loses nothing
     if (mode === "daily") {
@@ -984,6 +1203,7 @@ function finishTrade(t, exit) {
     }
 
     showReveal(puzzle, result, before);
+    climb(floorBefore, floor);
 }
 
 
@@ -1422,7 +1642,7 @@ function showResults() {
     $("final-score").className = "headline big fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
     showSquares();
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
-    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
+    $("final-line").textContent = `${retText} on your $10,000, and you finished ${floorPhrase(floor)}. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
 
     $("grid").innerHTML = "";
     buildGrid($("grid"), results);
@@ -1489,18 +1709,19 @@ function shareSquares(list) {
 }
 
 $("btn-share").addEventListener("click", () => {
-    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n${SITE_URL}`;
+    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n🏢 ${floorText(floor)}\n${SITE_URL}`;
     share(text, $("btn-share"));
 });
 
 // e.g. "Priced In #3 · 28 Oct / 🟩🟩 🟩⬜ / Today +$1,250 · Week +12.5%"
 function shareDay() {
     const key = todayKey();
-    const day = loadWeek().days[key];
+    const week = loadWeek();
+    const day = week.days[key];
     if (!day) return;
     const number = tradingDayIndex(key) + 1;
     const text = `Priced In #${number} · ${shortDay(key)}\n${shareSquares(day.results)}\n` +
-        `Today ${signedMoney(dayEnd(day) - day.start)} · Week ${weekReturnText()}\n${SITE_URL}`;
+        `Today ${signedMoney(dayEnd(day) - day.start)} · Week ${weekReturnText()}\n🏢 ${floorText(weekFloor(week))}\n${SITE_URL}`;
     share(text, $("btn-today"));
 }
 
