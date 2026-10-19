@@ -12,7 +12,7 @@ Raw facts for Michael to write his cards from. **Michael writes the card text hi
 | 2 | Netflix, Apr 2024 | ✅ In `puzzles.json`, with `candles` (text drafted by Claude, kept by Michael) |
 | 3 | Nike, Jun 2025 | ✅ In `puzzles.json`, with `candles` (move +15.2%: $62.54 → $72.04) |
 | 4 | Palantir, Nov 2025 | ✅ In `puzzles.json`, with `candles` (move −7.9%: $207.18 → $190.74) |
-| 5 | Microsoft, Jan 2026 | To write |
+| 5 | Microsoft, Jan 2026 | ✅ In `puzzles.json`, with `candles` (opened −8.6%, closed −10.0%: $481.63 → $433.50) |
 | 6 | Tesla, Apr 2024 | To write |
 | 7 | Oracle, Sep 2025 | ✅ In `puzzles.json`, with `candles` (opened +32.2%, closed +36.0%: $241.51 → $328.33) |
 | 8 | Nvidia, Feb 2026 | ✅ In `puzzles.json`, with `candles` (opened −0.7%, closed −5.5%: $195.56 → $184.89) |

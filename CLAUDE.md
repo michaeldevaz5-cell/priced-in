@@ -27,7 +27,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 
 - **Stack:** static site only. Plain HTML, CSS and vanilla JS. No frameworks, no build step, no npm packages in the site, no backend, no accounts, no payments, no analytics.
 - **Storage:** `localStorage` only, and every read and write is wrapped in try/catch.
-- **DESIGN FREEZE is on.** The layout was redesigned 4 times while the game had 2 cards, then restyled once more on 16 Oct 2026 (one font, Rubik; simpler flat colours; chunky buttons with a bottom edge), and given a Krillion-inspired night-city background on 18 Oct 2026 after the friend test. On 17 Oct Michael chose to build daily mode (see below) before the friend test. Don't add features or restyle anything else. Only bug fixes are allowed until Michael has run the friend test. If he asks for a new feature, remind him of the freeze once, then do what he decides.
+- **CONTENT FIRST (until Fri 6 Nov 2026).** The friend test is done, and the game has changed a lot since (trading, daily mode, charts, the night-city background). Daily cards go live Mon 26 Oct, and week 2 (2–6 Nov) needs 10 more cards. Until the first two daily weeks have run, the priority is cards, not code: only bug fixes, no new features or restyles. If Michael asks for a feature, remind him once, then do what he decides. After 6 Nov, review what players say before building anything new. (Decided by Claude at Michael's request, 19 Oct 2026.)
 - **Commits:** end the message with `(code by Claude)`, e.g. `Fix results colours (code by Claude)`. Michael commits and pushes himself in VS Code unless he asks you to.
 
 ## Files
@@ -50,8 +50,8 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
   - Dates are local `"YYYY-MM-DD"` keys. `?day=2026-10-27` in the URL pretends it's another day, for testing.
   - `todaysCards(key)`, `tradingDayIndex(key)`, `weekKey(key)` (Monday of that week; weekends belong to the week just ended).
   - **Weekly portfolio:** `loadWeek()` / `storeWeek()` keep `{ week, days: { key: { start, results } } }` in localStorage `pricedInWeek`. Each result is saved as soon as the bet is placed, so leaving mid-day loses nothing. A new week files the old one in `pricedInHistory` and resets to $10,000.
-- **Menu:** `showHub(tab)` shows the Today / Week / Practice tabs (`#tab-bar` in the bottom bar). `showToday` (live `startCountdown()` tiles to the next cards, cleared in `showOnly()` when leaving; `showTeasers()` for today's cards; `showWeekStrip()` Mon–Fri mini tiles, locked ahead), `showWeek` (day tiles, `drawWeekChart`, stats, `compareWithAlwaysBig`, past weeks), `showPractice`.
-- **Round:** `startDaily()` or `startPractice()` → `startRound()` → `showCard()` (draws the candles before the results, without prices) → `pickSide(long/short)` or Stay out → `placeTrade(level)` → `showOpen()` (the `#open` screen) → `finishTrade(trade, "open"|"close")` → `showReveal()` → next card, or the Today tab (daily), or `showResults()` (practice). Both use `deck`, the cards in this round.
+- **Menu:** `showHub(tab)` shows the Today / Week / Practice tabs (`#tab-bar` in the bottom bar). `showToday` (live `startCountdown()` tiles to the next cards, cleared in `showOnly()` when leaving; `showTeasers()` for today's cards; `showWeekStrip()` Mon–Fri mini tiles, locked ahead), `showWeek` (day tiles via `showWeekTiles()`, `drawWeekChart`, stats, `compareWithHolding`, past weeks), `showPractice`.
+- **Round:** `startDaily()` or `startPractice()` → `startRound()` → `showCard()` (draws the candles before the results, as % changes, never dollar prices) → `pickSide(long/short)` or Stay out → `placeTrade(level)` → `showOpen()` (the `#open` screen) → `finishTrade(trade, "open"|"close")` → `showReveal()` → next card, or the Today tab (daily), or `showResults()` (practice). Both use `deck`, the cards in this round.
   - `reaction(puzzle)` gives the results-day close (`before`) and the next day's open/high/low/close from `candles`.
   - In daily mode the open trade is saved as `day.pending` **before** the open is shown, so reloading can't change it; `startDaily()` resumes at the open screen.
   - A result stores `side`, `share`, `stake`, `exit`, `pnl`, `dirRight` (right way round), `timingRight` (picked the better exit), `openRet`, `closeRet`.
@@ -111,9 +111,9 @@ Before saying a change works:
 1. Play a full round (every card through to Results) on a laptop width (~1440px) and a phone width (390px).
 2. Check the console for errors.
 
-## Current state (17 Oct 2026)
+## Current state (19 Oct 2026)
 
-- **Cards:** 10 so far, in `puzzles.json`:
+- **Cards:** 11 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -124,8 +124,9 @@ Before saying a change works:
   - Nvidia, Feb 2026: has `candles`; opened −0.7%, closed −5.5% (holding mattered); `otherNews` drafted by Claude, and unsourced claims in Michael's `mood`/`why` (production delays, shrinking margins, whisper numbers) swapped for sourced reasons at his request. Margins actually rose (75.0%, SEC filing).
   - Meta, Feb 2024: has `candles`; second Meta card (disguised differently); opened +16.4%, closed +20.3%; `otherNews` drafted by Claude at Michael's request
   - Oracle, Sep 2025: has `candles`; missed on revenue and EPS but rose 36% on its $455bn contract backlog; opened +32.2%; `otherNews` drafted by Claude, disguise changed from "database" to "enterprise software" at Michael's request
+  - Microsoft, Jan 2026: has `candles`; beat but fell 10% (worst day since 2020) on record capex and slowing cloud growth; first card of week 2; `otherNews` drafted by Claude, disguise tweaked to differ from Alphabet's, at Michael's request
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
-- **Michael is writing about 10 more cards.** The full list, with figures and sources, is in `notes/card-research.md`.
+- **Next: 9 more cards for week 2 (2–6 Nov).** Amazon (Feb 2024) and Tesla (Apr 2024) are researched in `notes/card-research.md`; 7 more are needed. Pick days where the open and close differ a lot.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
 - **Friend test:** done 18 Oct 2026. Friends wanted to trade the reaction rather than call it, so the game switched to trading the same day. A minute-by-minute replay was considered but needs licensed intraday data; not planned.
-- **Daily mode built 17 Oct 2026:** 2 cards a weekday from Mon 26 Oct, weekly portfolio, Week tab, Practice. With 10 cards, week 1 (Mon 26 – Fri 30 Oct) is full. Week 2 (2–6 Nov) needs 10 more, or Today says "New cards coming soon". Tomorrow's friend test uses Practice.
+- **Daily mode built 17 Oct 2026:** 2 cards a weekday from Mon 26 Oct, weekly portfolio, Week tab, Practice. With 10 cards, week 1 (Mon 26 – Fri 30 Oct) is full. Week 2 (2–6 Nov) needs 10 more, or Today says "New cards coming soon". Before 26 Oct, the game opens on Practice.
