@@ -10,7 +10,7 @@ const START_VALUE = 10000;       // every week (and every practice round) starts
 const STAKES = { low: 0.10, mid: 0.25, high: 0.50 };   // share of the portfolio you put on a trade
 const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
 const DAILY_START = "2026-10-26";  // the Monday the first daily cards go live
-const CARDS_PER_DAY = 2;           // daily cards come from puzzles.json in order, 2 per weekday
+const CARDS_PER_DAY = 3;           // daily cards come from puzzles.json in order, 3 per weekday
 
 // ---------- Game state (the game's "memory") ----------
 let puzzles = [];            // every card from puzzles.json
@@ -69,7 +69,7 @@ function showHome() {
     document.body.classList.remove("in-game");
     $("home-cards").textContent = todayKey() < DAILY_START
         ? `${puzzles.length} cards to practise`
-        : "2 new cards every weekday";
+        : `${CARDS_PER_DAY} new cards every weekday`;
 
     const stats = loadStats();
     $("home-stats").textContent = stats.played > 0
@@ -427,7 +427,7 @@ function showToday(key, week) {
     let countdown = null;   // [label, the day the next cards arrive]
     if (key < DAILY_START) {
         title = "Daily cards start soon";
-        text = "Two new cards every weekday, with a $10,000 portfolio that carries through the week. Until then, play every card in Practice.";
+        text = `${CARDS_PER_DAY} new cards every weekday, with a $10,000 portfolio that carries through the week. Until then, play every card in Practice.`;
         button = "Go to Practice";
         countdown = ["First cards in", DAILY_START];
     } else if (isWeekend(key)) {
