@@ -113,7 +113,7 @@ Before saying a change works:
 
 ## Current state (19 Oct 2026)
 
-- **Cards:** 11 so far, in `puzzles.json`:
+- **Cards:** 12 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -125,8 +125,9 @@ Before saying a change works:
   - Meta, Feb 2024: has `candles`; second Meta card (disguised differently); opened +16.4%, closed +20.3%; `otherNews` drafted by Claude at Michael's request
   - Oracle, Sep 2025: has `candles`; missed on revenue and EPS but rose 36% on its $455bn contract backlog; opened +32.2%; `otherNews` drafted by Claude, disguise changed from "database" to "enterprise software" at Michael's request
   - Microsoft, Jan 2026: has `candles`; beat but fell 10% (worst day since 2020) on record capex and slowing cloud growth; first card of week 2; `otherNews` drafted by Claude, disguise tweaked to differ from Alphabet's, at Michael's request
+  - Amazon, Feb 2024: has `candles`; control (good news → up); opened +6.2%, closed +7.9%; the revenue forecast straddled consensus, so it isn't called a beat; `otherNews` drafted by Claude, disguise changed from "e-commerce" and "accelerating" ad growth changed to "strong" at Michael's request
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
-- **Next: 9 more cards for week 2 (2–6 Nov).** Amazon (Feb 2024) and Tesla (Apr 2024) are researched in `notes/card-research.md`; 7 more are needed. Pick days where the open and close differ a lot.
+- **Next: 8 more cards for week 2 (Tue 3 – Fri 6 Nov).** Tesla (Apr 2024) is researched in `notes/card-research.md`; 7 more are needed. Pick days where the open and close differ a lot.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
 - **Friend test:** done 18 Oct 2026. Friends wanted to trade the reaction rather than call it, so the game switched to trading the same day. A minute-by-minute replay was considered but needs licensed intraday data; not planned.
 - **Daily mode built 17 Oct 2026:** 2 cards a weekday from Mon 26 Oct, weekly portfolio, Week tab, Practice. With 10 cards, week 1 (Mon 26 – Fri 30 Oct) is full. Week 2 (2–6 Nov) needs 10 more, or Today says "New cards coming soon". Before 26 Oct, the game opens on Practice.
