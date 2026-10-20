@@ -392,6 +392,118 @@ body.in-game .bg-chart { opacity: 0.7; }
     100% { transform: none; }
 }
 
+/* Phones and tablets: "Next: Corner office at $12,500 · $1,297 to go" under the top bar */
+.next-level {
+    grid-column: 1 / -1;
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* Laptops: the tower down the left side. Rows run from the Rooftop (top) to the Street,
+   each with a coloured bar on the right; the gold marker sits at your balance. */
+.tower {
+    display: none;
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    width: 150px;
+    padding: 14px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border-soft);
+    background: rgba(13, 17, 23, 0.72);
+}
+
+.tower-title {
+    margin: 0 0 10px;
+    font-family: var(--pixel);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.tower-levels { position: relative; }
+
+.tower-row {
+    position: relative;
+    height: 46px;
+    padding: 6px 18px 0 8px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.tower-row::after {                 /* this level's slice of the coloured bar */
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    background: var(--bar);
+    opacity: 0.25;
+}
+.tower-row:nth-child(1) { --bar: #ffcf6b; }   /* Rooftop */
+.tower-row:nth-child(2) { --bar: #f0a060; }   /* Penthouse */
+.tower-row:nth-child(3) { --bar: #d0707a; }   /* Boardroom */
+.tower-row:nth-child(4) { --bar: #a066b0; }   /* Corner office */
+.tower-row:nth-child(5) { --bar: #4cc38a; }   /* Trading floor */
+.tower-row:nth-child(6) { --bar: #5b8def; }   /* Lobby */
+.tower-row:nth-child(7) { --bar: #4a5263; }   /* Street */
+
+.tower-name { font-size: 13px; font-weight: 600; color: var(--muted); }
+.tower-min { font-size: 11px; color: var(--muted); opacity: 0.8; }
+
+.tower-row.passed::after, .tower-row.now::after { opacity: 1; }
+.tower-row.passed .tower-name { color: var(--text-soft); }
+.tower-row.now { background: rgba(245, 196, 81, 0.1); }
+.tower-row.now .tower-name { color: var(--gold); }
+.tower-row.now .tower-min { color: var(--text-soft); }
+
+/* Your balance: a gold tick across the bar and a tag pointing at it */
+.tower-marker {
+    position: absolute;
+    left: 100%;
+    margin-left: 10px;
+    transform: translateY(50%);
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--gold);
+    color: #241A05;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: bottom 1.2s cubic-bezier(0.3, 1.2, 0.4, 1);
+}
+.tower-marker::before {             /* arrow pointing back at the bar */
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--gold);
+}
+.tower-marker::after {              /* tick across the bar */
+    content: "";
+    position: absolute;
+    right: calc(100% + 5px);
+    top: 50%;
+    width: 14px;
+    height: 2px;
+    margin-top: -1px;
+    background: var(--gold);
+}
+
+@media (min-width: 1180px) {
+    .tower { display: block; }
+    .next-level { display: none; }
+}
+
 /* Banner when you reach a new level */
 .floor-toast {
     position: fixed;
@@ -913,6 +1025,7 @@ code {
     .tape-track { animation: none; }
     .home-kicker, .home-title, .home-sub, .home-chips, .btn-start, .howto { animation: none; }
     .floor.floor-up, .floor.floor-down, .floor[data-level="6"] { animation: none; }
+    .tower-marker { transition: none; }
     /* The level banner still appears, but fades in place instead of moving */
     .floor-toast.show { animation: toast-fade 2.6s linear forwards; }
 }

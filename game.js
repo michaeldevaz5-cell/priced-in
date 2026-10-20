@@ -12,19 +12,18 @@ const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
 const DAILY_START = "2026-10-26";  // the Monday the first daily cards go live
 const CARDS_PER_DAY = 3;           // daily cards come from puzzles.json in order, 3 per weekday
 
-// The tower: a trade that makes money takes you up a floor, a loss takes you down one
-// (never below the street). The climb starts again every Monday, like the portfolio.
-// Each level looks a little more luxurious than the one below.
+// The tower: your portfolio balance decides which level you're on. Every week starts in the
+// Lobby with $10,000; fall below that and you're out on the street. The higher levels need
+// bigger gains, and each one looks more luxurious than the one below.
 const LEVELS = [
-    { from: 0, name: "Street" },
-    { from: 1, name: "Lobby" },
-    { from: 3, name: "Trading floor" },
-    { from: 5, name: "Corner office" },
-    { from: 8, name: "Boardroom" },
-    { from: 11, name: "Penthouse" },
-    { from: 14, name: "Rooftop" }
+    { min: 0, name: "Street" },
+    { min: 10000, name: "Lobby" },
+    { min: 11000, name: "Trading floor" },
+    { min: 12500, name: "Corner office" },
+    { min: 15000, name: "Boardroom" },
+    { min: 20000, name: "Penthouse" },
+    { min: 25000, name: "Rooftop" }
 ];
-const TOP_FLOOR = 15;              // a week has 15 cards, so 15 floors is the most you can climb
 
 // ---------- Game state (the game's "memory") ----------
 let puzzles = [];            // every card from puzzles.json
@@ -34,7 +33,6 @@ let dailyKey = null;         // the day being played in daily mode, e.g. "2026-1
 let cardIndex = 0;           // which card of the deck we're on (0 = first)
 let portfolio = START_VALUE; // current portfolio value in dollars
 let results = [];            // one entry per finished card
-let floor = 0;               // how high up the tower you are (0 = the street)
 
 // Shortcut: find an element by its id
 const $ = (id) => document.getElementById(id);
@@ -91,8 +89,8 @@ function showHome() {
         ? `Rounds played ${stats.played} · Best ${money(stats.bestValue)} · Streak ${stats.streak}`
         : "";
 
-    // The city starts at this week's floor of the tower
-    setSceneFloor(weekFloor(loadWeek()), true);
+    // The city starts at this week's level of the tower
+    setSceneTower(weekBalance(loadWeek()), true);
     buildTape();
     if (!homeChartFrame) startHomeChart();
     window.scrollTo(0, 0);
@@ -147,13 +145,14 @@ function hexRgb(hex) {
     return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 }
 
-// Where the scene is: "now" (floor) and "lv" (level) ease towards their targets so the change
-// is smooth; fx[i] fades in the touch that level i adds (0 = hidden, 1 = fully shown).
+// Where the scene is: "now" (your position on the tower, see towerPos) and "lv" (your level)
+// ease towards their targets so the change is smooth; fx[i] fades in the touch that level i
+// adds (0 = hidden, 1 = fully shown).
 const scene = { now: 0, target: 0, lv: 0, lvTarget: 0, fx: [0, 0, 0, 0, 0, 0, 0], redraw: null };
 
-function setSceneFloor(f, instant) {
-    scene.target = Math.min(f, TOP_FLOOR);
-    scene.lvTarget = levelIndex(f);
+function setSceneTower(balance, instant) {
+    scene.target = towerPos(balance);
+    scene.lvTarget = levelFor(balance);
     if (instant || reduceMotion) {
         scene.now = scene.target;
         scene.lv = scene.lvTarget;
@@ -418,14 +417,14 @@ function startHomeChart() {
             candles.push(nextCandle(candles[candles.length - 1]));
         }
 
-        // Ease towards the current floor and level, and fade each level's touch in or out
+        // Ease towards the current position and level, and fade each level's touch in or out
         const ease = Math.min(1, dt * 0.0025);
         scene.now += (scene.target - scene.now) * ease;
         scene.lv += (scene.lvTarget - scene.lv) * ease;
         scene.fx = scene.fx.map((v, i) => v + ((scene.lvTarget >= i ? 1 : 0) - v) * ease);
-        // Each level drops the city a clear step further below you (plus a little per floor)
-        // (at most ~22% of the screen, so the tallest rooftops still peek up on the Rooftop level)
-        const sink = Math.round((scene.lv / (LEVELS.length - 1) * 0.19 + scene.now / TOP_FLOOR * 0.03) * h / PX) * PX;
+        // Each level drops the city a clear step further below you, a little more as your balance
+        // grows within the level (at most ~22% of the screen, so rooftops still peek up at the top)
+        const sink = Math.round(Math.min(scene.now, LEVELS.length) / LEVELS.length * 0.22 * h / PX) * PX;
 
         drawSky();
 
@@ -611,49 +610,68 @@ function addToHistory(week) {
 
 
 // ---------- The tower ----------
-// Your floor isn't saved anywhere: it's worked out from the trades already played,
-// so it can never disagree with your results.
+// Your level isn't saved anywhere: it comes straight from your portfolio balance.
 
-// One step per card: up for a profit, down for a loss, nothing for staying out or breaking even
-const floorStep = (r) => (r.pnl > 0 ? 1 : r.pnl < 0 ? -1 : 0);
-
-// Walk up and down the tower, card by card, never going below the street
-function floorAfter(list) {
-    return list.reduce((f, r) => Math.max(0, f + floorStep(r)), 0);
-}
-
-// This week's floor, from every card played this week in order
-function weekFloor(week) {
-    return floorAfter(playedDays(week).flatMap(key => week.days[key].results));
-}
-
-// Which level a floor is on (0 = Street ... 6 = Rooftop)
-function levelIndex(f) {
+// Which level a balance is on (0 = Street ... 6 = Rooftop)
+function levelFor(balance) {
     let index = 0;
-    LEVELS.forEach((level, i) => { if (f >= level.from) index = i; });
+    LEVELS.forEach((level, i) => { if (balance >= level.min) index = i; });
     return index;
 }
 
-const levelName = (f) => LEVELS[levelIndex(f)].name;
-// "Floor 4 · Trading floor" (the street has no number)
-const floorText = (f) => (f === 0 ? "Street level" : `Floor ${f} · ${levelName(f)}`);
-// For sentences: "on floor 4, the trading floor"
-const floorPhrase = (f) => (f === 0 ? "at street level" : `on floor ${f}, the ${levelName(f).toLowerCase()}`);
-
-// The elevator display in the top bar, e.g. "04 Trading floor"
-function showFloor() {
-    const box = $("floor");
-    box.innerHTML = "";
-    box.appendChild(cell("span", f2(floor), "floor-num"));
-    box.appendChild(cell("span", levelName(floor), "floor-name"));
-    box.dataset.level = levelIndex(floor);
-    box.setAttribute("aria-label", floorText(floor));
+// Where a balance sits on the tower as one number: the level, plus how far through it you are.
+// e.g. $11,750 is halfway through the Trading floor ($11,000 to $12,500), so 2.5.
+// The street runs up from $5,000, and the rooftop tops out at $30,000.
+function towerPos(balance) {
+    const i = levelFor(balance);
+    const low = i === 0 ? 5000 : LEVELS[i].min;
+    const high = i < LEVELS.length - 1 ? LEVELS[i + 1].min : 30000;
+    return i + Math.max(0, Math.min(1, (balance - low) / (high - low)));
 }
 
-// Floor numbers in the elevator display: 0 → "G" (ground), 4 → "04"
-const f2 = (f) => (f === 0 ? "G" : String(f).padStart(2, "0"));
+// "Level 3 · Corner office" (the street has no number)
+const levelText = (i) => (i === 0 ? "Street level" : `Level ${i} · ${LEVELS[i].name}`);
+// For sentences: "on level 3, the corner office"
+const levelPhrase = (i) => (i === 0 ? "out on the street" : `on level ${i}, the ${LEVELS[i].name.toLowerCase()}`);
 
-// After a reveal: the elevator moves one floor, the city sinks or rises, and reaching
+// Everything that shows your place on the tower: the elevator display in the top bar,
+// the scale on the left (laptops) and the "next level" line (phones and tablets)
+function showTower(balance) {
+    const i = levelFor(balance);
+
+    const box = $("floor");
+    box.innerHTML = "";
+    box.appendChild(cell("span", i === 0 ? "G" : String(i), "floor-num"));
+    box.appendChild(cell("span", LEVELS[i].name, "floor-name"));
+    box.dataset.level = i;
+    box.setAttribute("aria-label", levelText(i));
+
+    $("next-level").textContent = i < LEVELS.length - 1
+        ? `Next: ${LEVELS[i + 1].name} at ${money(LEVELS[i + 1].min)} · ${money(LEVELS[i + 1].min - balance)} to go`
+        : "Top of the tower";
+
+    // The scale: one row per level, top to bottom, with a marker at your balance
+    const rows = $("tower-levels");
+    if (!rows.children.length) {
+        LEVELS.slice().reverse().forEach(level => {
+            const row = document.createElement("div");
+            row.className = "tower-row";
+            row.appendChild(cell("span", level.name, "tower-name"));
+            row.appendChild(cell("span", level.min ? money(level.min) : "below $10,000", "tower-min"));
+            rows.appendChild(row);
+        });
+        rows.appendChild(cell("div", "", "tower-marker"));
+    }
+    [...rows.querySelectorAll(".tower-row")].forEach((row, k) => {
+        const index = LEVELS.length - 1 - k;
+        row.className = "tower-row" + (index === i ? " now" : index < i ? " passed" : "");
+    });
+    const marker = rows.querySelector(".tower-marker");
+    marker.style.bottom = (towerPos(balance) / LEVELS.length * 100).toFixed(2) + "%";
+    marker.textContent = money(balance);
+}
+
+// After a reveal: the elevator, the scale and the city move to your new balance, and reaching
 // a new level gets a banner. Waits until the profit or loss has finished counting.
 let climbTimer = null;
 let pendingClimb = null;
@@ -663,11 +681,11 @@ function climb(from, to) {
     if (from === to) return;
     const go = () => {
         pendingClimb = null;
-        showFloor();
-        replayAnimation($("floor"), to > from ? "floor-up" : "floor-down");
-        setSceneFloor(to);
-        const newLevel = levelIndex(to), oldLevel = levelIndex(from);
+        showTower(to);
+        setSceneTower(to);
+        const newLevel = levelFor(to), oldLevel = levelFor(from);
         if (newLevel !== oldLevel) {
+            replayAnimation($("floor"), newLevel > oldLevel ? "floor-up" : "floor-down");
             const toast = $("floor-toast");
             toast.textContent = newLevel > oldLevel ? `▲ ${LEVELS[newLevel].name}` : `▼ Back to the ${LEVELS[newLevel].name.toLowerCase()}`;
             toast.className = "floor-toast " + (newLevel > oldLevel ? "is-up" : "is-down");
@@ -712,9 +730,8 @@ function showHub(tab) {
     showSquares();
     $("progress").textContent = deck.length ? "Today" : isWeekend(key) ? "Market closed" : "No new cards";
     finishClimb();
-    floor = weekFloor(week);
-    showFloor();
-    setSceneFloor(floor);
+    showTower(portfolio);
+    setSceneTower(portfolio);
 
     // Show the screen first, so the week graph can measure its width
     showOnly(tab);
@@ -945,7 +962,7 @@ function showWeek(key, week) {
         const worst = all.reduce((a, b) => (b.pnl < a.pnl ? b : a));
         const biggest = all.reduce((a, b) => (b.stake > a.stake ? b : a));
         const trades = all.filter(r => r.side !== "out");
-        addStat(stats, "Tower", floorText(weekFloor(week)), "gold");
+        addStat(stats, "Tower", levelText(levelFor(balance)), "gold");
         addStat(stats, "Right way round", `${trades.filter(r => r.dirRight).length} of ${trades.length}`);
         addStat(stats, "Better exit", `${trades.filter(r => r.timingRight).length} of ${trades.length}`);
         addStat(stats, "Biggest trade", `${money(biggest.stake)} · ${biggest.company}`);
@@ -1036,9 +1053,8 @@ function startRound() {
     $("portfolio").textContent = money(portfolio);
     showReturn();
     finishClimb();
-    floor = 0;           // a practice round climbs its own tower from the street
-    showFloor();
-    setSceneFloor(floor);
+    showTower(portfolio);   // a practice round starts in the Lobby with its own $10,000
+    setSceneTower(portfolio);
     showCard();
 }
 
@@ -1060,9 +1076,8 @@ function startDaily() {
     portfolio = dayEnd(day);
     $("portfolio").textContent = money(portfolio);
     showReturn();
-    floor = weekFloor(week);
-    showFloor();
-    setSceneFloor(floor);
+    showTower(portfolio);
+    setSceneTower(portfolio);
     if (cardIndex >= deck.length) { showHub("today"); return; }
     showCard();
     if (day.pending && day.pending.id === deck[cardIndex].id) {
@@ -1297,8 +1312,6 @@ function finishTrade(t, exit) {
 
     const before = portfolio;
     portfolio += pnl;
-    const floorBefore = floor;
-    floor = Math.max(0, floor + floorStep(result));
 
     // Daily results are saved straight away, so leaving halfway through loses nothing
     if (mode === "daily") {
@@ -1312,7 +1325,7 @@ function finishTrade(t, exit) {
     }
 
     showReveal(puzzle, result, before);
-    climb(floorBefore, floor);
+    climb(before, portfolio);
 }
 
 
@@ -1751,7 +1764,7 @@ function showResults() {
     $("final-score").className = "headline big fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
     showSquares();
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
-    $("final-line").textContent = `${retText} on your $10,000, and you finished ${floorPhrase(floor)}. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
+    $("final-line").textContent = `${retText} on your $10,000, and you finished ${levelPhrase(levelFor(portfolio))}. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
 
     $("grid").innerHTML = "";
     buildGrid($("grid"), results);
@@ -1818,7 +1831,7 @@ function shareSquares(list) {
 }
 
 $("btn-share").addEventListener("click", () => {
-    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n🏢 ${floorText(floor)}\n${SITE_URL}`;
+    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n🏢 ${levelText(levelFor(portfolio))}\n${SITE_URL}`;
     share(text, $("btn-share"));
 });
 
@@ -1830,7 +1843,7 @@ function shareDay() {
     if (!day) return;
     const number = tradingDayIndex(key) + 1;
     const text = `Priced In #${number} · ${shortDay(key)}\n${shareSquares(day.results)}\n` +
-        `Today ${signedMoney(dayEnd(day) - day.start)} · Week ${weekReturnText()}\n🏢 ${floorText(weekFloor(week))}\n${SITE_URL}`;
+        `Today ${signedMoney(dayEnd(day) - day.start)} · Week ${weekReturnText()}\n🏢 ${levelText(levelFor(weekBalance(week)))}\n${SITE_URL}`;
     share(text, $("btn-today"));
 }
 
