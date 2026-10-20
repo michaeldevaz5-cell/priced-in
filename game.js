@@ -120,34 +120,43 @@ function buildTape() {
     }
 }
 
-// The background scene: a city at night, like Wall Street after the closing bell.
-// A pixel-art skyline along the bottom (lit windows that flicker, blinking red lights
-// on the antennas) and a giant, faint candlestick chart drifting across the sky.
-// The candles are a random walk, purely decorative, not real prices.
-// As you climb the tower, every level looks clearly different: the sky warms from night
-// to a gold sunset, the city drops a step further below you, and each level adds a touch
-// (see SKIES and the draw functions below).
+// The background scene: a pixel-art city at night, like Wall Street after the closing bell,
+// with a giant, faint candlestick chart drifting across the sky (a random walk, purely
+// decorative, not real prices).
+// It's also the tower. As your balance climbs you rise above the city, and every level
+// looks clearly different:
+//   - the city is three rows of buildings that fall away at different speeds (the nearest
+//     fastest) and fade into haze, until only the tallest towers poke up
+//   - you climb through the clouds: wisps overhead, then a cloud bank you pass through,
+//     then a sea of clouds below you
+//   - each level has its own sky with one big feature in it: a full moon, neon city glow,
+//     a bold green rally on the sky chart, a crescent moon and the evening star, a striped
+//     setting sun, golden sun rays, and the sun blazing over the clouds
+//   - each level adds a touch that stays on the levels above it: searchlights, a blimp,
+//     a helicopter, gold sparkles, a balcony railing, party lights and fireworks
 let homeChartFrame = null;
 
-// Sky colours for each level of the tower: top of the screen, middle, horizon,
-// and the glow rising from behind the city [r, g, b, strength]
+// Colours for each level: sky top, middle and horizon; the glow rising from behind the city
+// [r, g, b, strength]; and the clouds (lit top and shaded underside)
 const SKIES = [
-    ["#0b0f1c", "#111830", "#2b2236", [245, 196, 81, 0.16]],    // Street: deep night
-    ["#0a1224", "#142650", "#33386a", [130, 170, 255, 0.20]],   // Lobby: city lights, searchlights
-    ["#0e1838", "#22377a", "#5a5a9a", [140, 220, 180, 0.20]],   // Trading floor: blue hour
-    ["#181640", "#3e2f7a", "#9a5c8c", [255, 150, 120, 0.24]],   // Corner office: dusk
-    ["#1e1442", "#5a2f78", "#d0707a", [255, 140, 90, 0.30]],    // Boardroom: sunset
-    ["#23164a", "#7a3a72", "#f0a060", [255, 190, 90, 0.36]],    // Penthouse: golden hour
-    ["#2a1450", "#9a4070", "#ffcf6b", [255, 215, 120, 0.45]]    // Rooftop: gold
-].map(([top, mid, low, glow]) => ({ top: hexRgb(top), mid: hexRgb(mid), low: hexRgb(low), glow }));
+    ["#0b0f1c", "#111830", "#2b2236", [245, 196, 81, 0.16], "#48526e", "#262c44"],    // Street: deep night
+    ["#0a1224", "#142650", "#33386a", [130, 170, 255, 0.20], "#5e6894", "#323a5e"],   // Lobby: neon city
+    ["#0e1838", "#22377a", "#5a5a9a", [140, 220, 180, 0.20], "#96a0d2", "#50588c"],   // Trading floor: blue hour
+    ["#181640", "#3e2f7a", "#9a5c8c", [255, 150, 120, 0.24], "#e6aac8", "#785a8c"],   // Corner office: dusk
+    ["#1e1442", "#5a2f78", "#d0707a", [255, 140, 90, 0.30], "#ffbea0", "#aa5f78"],    // Boardroom: sunset
+    ["#23164a", "#7a3a72", "#f0a060", [255, 190, 90, 0.36], "#ffd796", "#c8786e"],    // Penthouse: golden hour
+    ["#2a1450", "#9a4070", "#ffcf6b", [255, 215, 120, 0.45], "#fff0c8", "#e6aa8c"]    // Rooftop: gold
+].map(([top, mid, low, glow, cloud, shade]) => ({
+    top: hexRgb(top), mid: hexRgb(mid), low: hexRgb(low), glow, cloud: hexRgb(cloud), shade: hexRgb(shade)
+}));
 
 function hexRgb(hex) {
     return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 }
 
-// Where the scene is: "now" (your position on the tower, see towerPos) and "lv" (your level)
-// ease towards their targets so the change is smooth; fx[i] fades in the touch that level i
-// adds (0 = hidden, 1 = fully shown).
+// Where the scene is: "now" (your position on the tower, 0 to 7, see towerPos) and "lv" (your
+// level) ease towards their targets so changes are smooth; fx[i] fades in the touch that
+// level i adds (0 = hidden, 1 = fully shown).
 const scene = { now: 0, target: 0, lv: 0, lvTarget: 0, fx: [0, 0, 0, 0, 0, 0, 0], redraw: null };
 
 function setSceneTower(balance, instant) {
@@ -161,22 +170,42 @@ function setSceneTower(balance, instant) {
     if (reduceMotion && scene.redraw) scene.redraw();
 }
 
+// Where the top of the cloud bank is on screen (as a share of the height) for each position
+// on the tower: off the top until the Trading floor, through the middle of the screen at the
+// Corner office, then below you as a sea of clouds
+const CLOUD_BANK = [[2.6, -0.15], [3.2, 0.08], [3.7, 0.30], [4.2, 0.48], [5, 0.58], [6, 0.68], [7, 0.74]];
+
+function bankTop(alt) {
+    if (alt <= CLOUD_BANK[0][0]) return CLOUD_BANK[0][1];
+    for (let i = 1; i < CLOUD_BANK.length; i++) {
+        const [a0, y0] = CLOUD_BANK[i - 1], [a1, y1] = CLOUD_BANK[i];
+        if (alt <= a1) return y0 + (y1 - y0) * (alt - a0) / (a1 - a0);
+    }
+    return CLOUD_BANK[CLOUD_BANK.length - 1][1];
+}
+
 function startHomeChart() {
     const canvas = $("bg-chart");
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const PX = 3;                     // one "pixel" of pixel art, in screen pixels
+    const snap = (v) => Math.round(v / PX) * PX;
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    const rgb = (c) => `rgb(${c.join(",")})`;
+    const rgba = (c, a) => `rgba(${c.join(",")}, ${Math.max(0, a).toFixed(3)})`;
     let w = 0, h = 0;
-    let skyline = null;               // the buildings, drawn once onto their own canvas
-    let windows = [];                 // lit windows that can flicker
-    let lights = [];                  // red antenna lights
+    let layers = [];                  // the city: far, middle and near rows of buildings
     let stars = [];
     let candles = [];
     let sparkles = [];                // gold dust drifting up (Boardroom and above)
+    let wisps = [];                   // small clouds, high overhead at street level
+    let bank = [];                    // the puffy top edge of the cloud bank
     let bursts = [];                  // fireworks (Rooftop)
     let nextBurst = 0;
-    let offset = 0;
+    let offset = 0;                   // how far the sky chart has drifted
+    let drift = 0;                    // how far the clouds have drifted
     let last = performance.now();
+    let pal = null;                   // this frame's colours, blended between two levels
 
     // The same "random" city every time, so it doesn't jump about on resize
     function seeded(seed) {
@@ -188,40 +217,45 @@ function startHomeChart() {
         };
     }
 
-    function buildCity() {
-        const rand = seeded(7);
-        skyline = document.createElement("canvas");
-        skyline.width = w * dpr;
-        skyline.height = h * dpr;
-        const s = skyline.getContext("2d");
-        s.setTransform(dpr, 0, 0, dpr, 0, 0);
-        windows = [];
-        lights = [];
-
-        // Two rows of buildings: a dim one behind, a darker one in front
-        [["#151b2b", 0.30, 0.6], ["#0b0f18", 0.20, 1]].forEach(([colour, tallest, lit]) => {
+    // Each row of buildings is drawn once onto its own canvas. "depth" is how far the row has
+    // fallen at the top of the tower, as a share of the screen: the near row drops out of sight
+    // first, the far row last.
+    function buildCity(rand) {
+        layers = [
+            { colour: "#1b2236", lowest: 0.10, tallest: 0.40, lit: 0.45, depth: 0.38 },   // far
+            { colour: "#111725", lowest: 0.08, tallest: 0.30, lit: 0.7, depth: 0.47 },    // middle
+            { colour: "#080b12", lowest: 0.06, tallest: 0.20, lit: 1, depth: 0.58 }       // near
+        ];
+        layers.forEach(layer => {
+            const c = document.createElement("canvas");
+            c.width = w * dpr;
+            c.height = h * dpr;
+            const s = c.getContext("2d");
+            s.setTransform(dpr, 0, 0, dpr, 0, 0);
+            layer.canvas = c;
+            layer.windows = [];
+            layer.lights = [];
             let x = -PX * 4;
             while (x < w) {
                 const bw = PX * (8 + Math.floor(rand() * 14));
-                const bh = Math.round(h * (0.06 + rand() * tallest) / PX) * PX;
+                const bh = snap(h * (layer.lowest + rand() * (layer.tallest - layer.lowest)));
                 const top = h - bh;
-                s.fillStyle = colour;
+                s.fillStyle = layer.colour;
                 s.fillRect(x, top, bw, bh);
                 // A stepped roof or an antenna on some of them
                 if (rand() < 0.35) s.fillRect(x + PX * 2, top - PX * 3, bw - PX * 4, PX * 3);
                 if (rand() < 0.25 && bh > h * 0.18) {
                     const ax = x + Math.floor(bw / 2 / PX) * PX;
                     s.fillRect(ax, top - PX * 12, PX, PX * 12);
-                    if (lit === 1) lights.push({ x: ax, y: top - PX * 13, phase: rand() * 6 });
+                    if (layer.lit >= 0.7) layer.lights.push({ x: ax, y: top - PX * 13, phase: rand() * 6 });
                 }
-                // Windows in a grid, some lit gold
+                // Windows in a grid, some lit gold (dimmer on the rows further away)
                 for (let wy = top + PX * 3; wy < h - PX * 3; wy += PX * 3) {
                     for (let wx = x + PX * 2; wx < x + bw - PX * 2; wx += PX * 3) {
-                        if (rand() < 0.16 * lit) {
-                            const win = { x: wx, y: wy, on: true, flicker: rand() < 0.08 };
-                            if (win.flicker) windows.push(win);
+                        if (rand() < 0.16 * layer.lit) {
+                            if (rand() < 0.08) layer.windows.push({ x: wx, y: wy, on: true });
                             else {
-                                s.fillStyle = rand() < 0.8 ? "rgba(245, 196, 81, 0.55)" : "rgba(242, 244, 247, 0.35)";
+                                s.fillStyle = rand() < 0.8 ? `rgba(245, 196, 81, ${0.55 * layer.lit})` : `rgba(242, 244, 247, ${0.35 * layer.lit})`;
                                 s.fillRect(wx, wy, PX, PX);
                             }
                         }
@@ -230,40 +264,182 @@ function startHomeChart() {
                 x += bw + PX * Math.floor(rand() * 3);
             }
         });
+    }
+
+    // A cloud is a few overlapping pixel circles: [dx, dy, radius]
+    function makeCloud(rand, size) {
+        const n = 3 + Math.floor(rand() * 3);
+        const parts = [];
+        for (let i = 0; i < n; i++) {
+            parts.push([(i - (n - 1) / 2) * size * 0.9 + (rand() - 0.5) * size * 0.4, (rand() - 0.5) * size * 0.3, size * (0.6 + rand() * 0.5)]);
+        }
+        return parts;
+    }
+
+    function build() {
+        const rand = seeded(7);
+        buildCity(rand);
 
         stars = [];
-        for (let i = 0; i < 60; i++) {
-            stars.push({ x: Math.floor(rand() * w / PX) * PX, y: Math.floor(rand() * h * 0.5 / PX) * PX, phase: rand() * 6 });
+        for (let i = 0; i < 90; i++) {
+            stars.push({ x: snap(rand() * w), y: snap(rand() * h * 0.55), phase: rand() * 6, size: rand() < 0.12 ? PX : 2 });
         }
-
         sparkles = [];
-        for (let i = 0; i < 36; i++) {
+        for (let i = 0; i < 70; i++) {
             sparkles.push({ x: rand() * w, y: rand() * h, speed: 0.008 + rand() * 0.02, phase: rand() * 6 });
+        }
+        wisps = [];
+        for (let i = 0; i < 8; i++) {
+            wisps.push({ x: rand() * (w + PX * 80), y: (rand() - 0.5) * h * 0.14, speed: 0.6 + rand() * 0.8, parts: makeCloud(rand, PX * (5 + rand() * 4)) });
+        }
+        bank = [];
+        for (let x = 0; x < w + PX * 44; x += PX * 22) {
+            bank.push({ x, y: rand() * PX * 6, parts: makeCloud(rand, PX * (9 + rand() * 6)) });
         }
     }
 
-    // The sky for the current level, blended smoothly into the next one while climbing
-    function drawSky() {
+    // This frame's colours: the two nearest levels blended together
+    function palette() {
         const i = Math.min(SKIES.length - 2, Math.floor(scene.lv));
         const t = scene.lv - i;
         const a = SKIES[i], b = SKIES[i + 1];
         const mix = (p, q) => p.map((v, k) => Math.round(v + (q[k] - v) * t));
-        const rgb = (c) => `rgb(${c.join(",")})`;
+        return {
+            top: mix(a.top, b.top), mid: mix(a.mid, b.mid), low: mix(a.low, b.low),
+            glow: mix(a.glow.slice(0, 3), b.glow.slice(0, 3)), glowA: a.glow[3] + (b.glow[3] - a.glow[3]) * t,
+            cloud: mix(a.cloud, b.cloud), shade: mix(a.shade, b.shade)
+        };
+    }
 
+    function drawSky() {
         const sky = ctx.createLinearGradient(0, 0, 0, h);
-        sky.addColorStop(0, rgb(mix(a.top, b.top)));
-        sky.addColorStop(0.55, rgb(mix(a.mid, b.mid)));
-        sky.addColorStop(1, rgb(mix(a.low, b.low)));
+        sky.addColorStop(0, rgb(pal.top));
+        sky.addColorStop(0.55, rgb(pal.mid));
+        sky.addColorStop(1, rgb(pal.low));
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, w, h);
 
-        const g = mix(a.glow.slice(0, 3), b.glow.slice(0, 3));
-        const strength = a.glow[3] + (b.glow[3] - a.glow[3]) * t;
         const glow = ctx.createRadialGradient(w / 2, h, 0, w / 2, h, Math.max(w, h) * 0.75);
-        glow.addColorStop(0, `rgba(${g.join(",")}, ${strength.toFixed(3)})`);
-        glow.addColorStop(1, `rgba(${g.join(",")}, 0)`);
+        glow.addColorStop(0, rgba(pal.glow, pal.glowA));
+        glow.addColorStop(1, rgba(pal.glow, 0));
         ctx.fillStyle = glow;
         ctx.fillRect(0, 0, w, h);
+    }
+
+    // Street to Corner office: a big pixel moon, full at night, a thin crescent by dusk
+    function drawMoon() {
+        const show = clamp(3.8 - scene.lv);
+        if (show <= 0) return;
+        const R = snap(Math.min(w, h) * 0.065);
+        const mx = snap(w * 0.8), my = snap(h * (0.15 - scene.lv * 0.015));
+        const phase = clamp((scene.lv - 2.2) / 0.9);            // 0 = full, 1 = crescent (by the Corner office)
+        const sx = mx - R * (2.1 - 1.6 * phase);                 // the shadow that makes the crescent
+
+        const halo = ctx.createRadialGradient(mx, my, R * 0.8, mx, my, R * 3.5);
+        halo.addColorStop(0, `rgba(220, 230, 255, ${(0.18 * show).toFixed(3)})`);
+        halo.addColorStop(1, "rgba(220, 230, 255, 0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(mx - R * 4, my - R * 4, R * 8, R * 8);
+
+        ctx.globalAlpha = show;
+        for (let y = -R; y < R; y += PX) {
+            const half = Math.sqrt(R * R - (y + PX / 2) * (y + PX / 2));
+            const from = Math.max(mx - half, sx + half);         // the lit part, right of the shadow
+            if (from < mx + half) {
+                ctx.fillStyle = "#ece8d4";
+                ctx.fillRect(snap(from), my + y, snap(mx + half - from), PX);
+            }
+        }
+        // Craters on the full moon
+        if (phase < 0.3) {
+            ctx.fillStyle = "#cdc8b0";
+            [[-0.35, -0.2, 3], [0.2, 0.25, 4], [0.05, -0.5, 2], [-0.1, 0.45, 2]].forEach(([dx, dy, s]) => {
+                ctx.fillRect(snap(mx + dx * R), snap(my + dy * R), PX * s, PX * s);
+            });
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // Lobby: pink and cyan neon glowing up from the city
+    function drawNeon() {
+        const n = clamp(1 - Math.abs(scene.lv - 1) * 0.8);
+        if (n <= 0) return;
+        [[0.28, [255, 70, 190]], [0.74, [60, 220, 255]]].forEach(([fx, c]) => {
+            const g = ctx.createRadialGradient(w * fx, h, 0, w * fx, h, h * 0.75);
+            g.addColorStop(0, rgba(c, 0.4 * n));
+            g.addColorStop(1, rgba(c, 0));
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, w, h);
+        });
+    }
+
+    // Corner office: the evening star, a bright four-pointed twinkle near the moon
+    function drawEveningStar(now) {
+        const s = clamp(1 - Math.abs(scene.lv - 3) * 0.9);
+        if (s <= 0) return;
+        const x = snap(w * 0.64), y = snap(h * 0.1);
+        const tw = s * (reduceMotion ? 1 : 0.75 + 0.25 * Math.sin(now / 500));
+        ctx.fillStyle = `rgba(255, 250, 235, ${tw.toFixed(3)})`;
+        ctx.fillRect(x - PX, y - PX, PX * 3, PX * 3);
+        for (let k = 2; k <= 6; k++) {
+            ctx.fillStyle = `rgba(255, 250, 235, ${(tw * (1 - k / 7)).toFixed(3)})`;
+            ctx.fillRect(x - k * PX, y, PX, PX);
+            ctx.fillRect(x + k * PX, y, PX, PX);
+            ctx.fillRect(x, y - k * PX, PX, PX);
+            ctx.fillRect(x, y + k * PX, PX, PX);
+        }
+    }
+
+    // Boardroom to Rooftop: the sun. At the Boardroom it's a huge retro sun with stripes,
+    // sinking into the clouds; higher up it rises clear of them, the stripes close up and
+    // golden rays fan out (Penthouse) and spin slowly (Rooftop).
+    function drawSun(now, alt) {
+        const show = clamp((scene.lv - 3.3) / 0.8);
+        if (show <= 0) return;
+        const R = snap(Math.min(w, h) * 0.16);
+        const lift = 0.45 + Math.min(3, Math.max(0, alt - 4)) / 3 * 0.9;   // how far it sits above the clouds
+        const sx = snap(w * 0.5), sy = snap(bankTop(alt) * h - R * lift);
+
+        const glow = ctx.createRadialGradient(sx, sy, R * 0.5, sx, sy, R * 4.5);
+        glow.addColorStop(0, `rgba(255, 200, 120, ${(0.5 * show).toFixed(3)})`);
+        glow.addColorStop(1, "rgba(255, 200, 120, 0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, w, h);
+
+        const rays = clamp((scene.lv - 4.3) / 0.9) * show;
+        if (rays > 0) {
+            const L = Math.max(w, h) * 1.3;
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(reduceMotion ? 0.2 : now / 40000);
+            ctx.fillStyle = `rgba(255, 236, 190, ${(0.12 * rays).toFixed(3)})`;
+            for (let i = 0; i < 12; i++) {
+                ctx.rotate(Math.PI / 6);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(L, -L * 0.08);
+                ctx.lineTo(L, L * 0.08);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        const stripes = clamp(1 - Math.abs(scene.lv - 4) * 0.8);
+        const topColour = [255, 230, 125];
+        const bottomColour = [255 , Math.round(95 + 90 * rays), Math.round(140 - 40 * rays)];
+        ctx.globalAlpha = show;
+        for (let y = -R, row = 0; y < R; y += PX, row++) {
+            const t = (y + R) / (2 * R);
+            if (t > 0.5 && stripes > 0.05) {
+                const depth = (t - 0.5) * 2;                          // 0 at the middle, 1 at the bottom
+                const gap = Math.round(stripes * (1 + depth * 3));    // stripes get wider lower down
+                if (row % 6 < gap) continue;
+            }
+            const half = Math.sqrt(R * R - (y + PX / 2) * (y + PX / 2));
+            ctx.fillStyle = rgb(topColour.map((v, k) => Math.round(v + (bottomColour[k] - v) * t)));
+            ctx.fillRect(snap(sx - half), sy + y, snap(half * 2), PX);
+        }
+        ctx.globalAlpha = 1;
     }
 
     // Lobby and above: two searchlights sweeping the sky from behind the city
@@ -289,11 +465,38 @@ function startHomeChart() {
         });
     }
 
+    // The sky chart: wide, faint candles in the top half of the screen. At the Trading floor
+    // it turns bold and tilts into a rally, rising to the right.
+    const CW = PX * 4, GAP = PX * 3;
+    function nextCandle(prev) {
+        const open = prev ? prev.close : h * 0.32;
+        let close = open + (Math.random() - 0.5) * h * 0.06;
+        close += (h * 0.32 - close) * 0.08;   // drift back towards the middle of the sky
+        const high = Math.min(open, close) - Math.random() * h * 0.025;
+        const low = Math.max(open, close) + Math.random() * h * 0.025;
+        return { open, close, high, low };
+    }
+
+    function drawCandles() {
+        const rally = clamp(1 - Math.abs(scene.lv - 2) * 0.9);
+        const edge = w * 0.18;
+        candles.forEach((c, i) => {
+            const x = i * (CW + GAP) - offset;
+            const fade = Math.max(0, Math.min(1, (x + CW) / edge, (w - x) / edge));
+            if (fade === 0) return;
+            const tilt = (0.5 - x / w) * h * 0.24 * rally;
+            const alpha = ((0.13 + 0.42 * rally) * fade).toFixed(3);
+            ctx.fillStyle = c.close <= c.open ? `rgba(76, 195, 138, ${alpha})` : `rgba(242, 109, 109, ${alpha})`;
+            ctx.fillRect(x + CW / 2 - 1, snap(c.high + tilt), PX - 1, snap(c.low) - snap(c.high));
+            ctx.fillRect(x, snap(Math.min(c.open, c.close) + tilt), CW, Math.max(PX, snap(Math.abs(c.close - c.open))));
+        });
+    }
+
     // Trading floor and above: a pixel blimp drifting slowly across the sky
     function drawBlimp(now) {
         const span = w + PX * 60;
-        const x = Math.round((reduceMotion ? w * 0.62 : (now * 0.012) % span - PX * 30) / PX) * PX;
-        const y = Math.round(h * 0.16 / PX) * PX;
+        const x = snap(reduceMotion ? w * 0.62 : (now * 0.012) % span - PX * 30);
+        const y = snap(h * 0.16);
         ctx.globalAlpha = scene.fx[2];
         // The body, row by row, so it reads as a rounded pixel shape
         [10, 16, 18, 18, 16, 10].forEach((cols, row) => {
@@ -314,8 +517,8 @@ function startHomeChart() {
     function drawHelicopter(now) {
         const cycle = (now % 16000) / 16000;
         if (!reduceMotion && cycle > 0.5) return;
-        const x = Math.round((reduceMotion ? w * 0.3 : w + PX * 20 - cycle * 2 * (w + PX * 40)) / PX) * PX;
-        const y = Math.round((h * 0.3 + (reduceMotion ? 0 : Math.sin(now / 600) * PX * 2)) / PX) * PX;
+        const x = snap(reduceMotion ? w * 0.3 : w + PX * 20 - cycle * 2 * (w + PX * 40));
+        const y = snap(h * 0.3 + (reduceMotion ? 0 : Math.sin(now / 600) * PX * 2));
         ctx.globalAlpha = scene.fx[3];
         ctx.fillStyle = "#1c2230";
         ctx.fillRect(x, y, PX * 6, PX * 3);                   // body
@@ -333,12 +536,170 @@ function startHomeChart() {
         ctx.globalAlpha = 1;
     }
 
+    // Rooftop fireworks: a burst high in the sky every few seconds
+    function drawFireworks(now) {
+        if (reduceMotion) return;
+        if (now > nextBurst) {
+            nextBurst = now + 1800 + Math.random() * 2200;
+            const colours = ["255, 255, 255", "255, 120, 190", "110, 220, 255", "120, 240, 160"];
+            bursts.push({ x: w * (0.12 + Math.random() * 0.76), y: h * (0.08 + Math.random() * 0.2), start: now,
+                colour: colours[Math.floor(Math.random() * colours.length)] });
+        }
+        bursts = bursts.filter(b => now - b.start < 1600);
+        bursts.forEach(b => {
+            const t = (now - b.start) / 1600;
+            const alpha = (0.95 * (1 - t * t) * scene.fx[6]).toFixed(3);
+            // Two rings of sparks: a wide outer one and a smaller inner one
+            [[20, 95], [12, 55]].forEach(([count, reach]) => {
+                const r = 6 + t * reach;
+                ctx.fillStyle = `rgba(${b.colour}, ${alpha})`;
+                for (let i = 0; i < count; i++) {
+                    const a = (i / count) * Math.PI * 2;
+                    ctx.fillRect(snap(b.x + Math.cos(a) * r), snap(b.y + Math.sin(a) * r + t * t * 24), PX, PX);
+                }
+            });
+        });
+    }
+
+    // The three rows of buildings, each fallen as far as your height puts it, with haze
+    // settling over the rows further away
+    function drawCity(now, alt) {
+        layers.forEach((layer, i) => {
+            const sink = snap(Math.min(alt, 7) / 7 * layer.depth * h);
+            ctx.drawImage(layer.canvas, 0, sink, w, h);
+            layer.windows.forEach(win => {
+                if (Math.random() < 0.002) win.on = !win.on;
+                if (!win.on) return;
+                ctx.fillStyle = `rgba(245, 196, 81, ${0.7 * layer.lit})`;
+                ctx.fillRect(win.x, win.y + sink, PX, PX);
+            });
+            layer.lights.forEach(l => {
+                if (Math.sin(now / 500 + l.phase) > 0.3) {
+                    ctx.fillStyle = "rgba(242, 109, 109, 0.9)";
+                    ctx.fillRect(l.x - 1, l.y + sink, PX + 2, PX);
+                }
+            });
+            const haze = Math.min(0.65, alt / 7 * 0.75) * (i === 0 ? 1 : i === 1 ? 0.5 : 0);
+            if (haze > 0.02) {
+                const g = ctx.createLinearGradient(0, h * 0.4, 0, h);
+                g.addColorStop(0, rgba(pal.low, 0));
+                g.addColorStop(1, rgba(pal.low, haze));
+                ctx.fillStyle = g;
+                ctx.fillRect(0, h * 0.4, w, h * 0.6);
+            }
+        });
+    }
+
+    // A cloud: shaded underside first, then the lit top a little higher, which leaves a
+    // shaded rim along the bottom
+    function drawCloud(cx, cy, parts, alpha) {
+        ctx.globalAlpha = alpha;
+        [[pal.shade, 0, 0], [pal.cloud, -PX * 2, PX]].forEach(([colour, lift, shrink]) => {
+            ctx.fillStyle = rgb(colour);
+            parts.forEach(([dx, dy, r0]) => {
+                const r = r0 - shrink;
+                for (let y = -r; y < r; y += PX) {
+                    const half = Math.sqrt(r * r - (y + PX / 2) * (y + PX / 2));
+                    ctx.fillRect(snap(cx + dx - half), snap(cy + dy + y + lift), snap(half * 2), PX);
+                }
+            });
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    // Small clouds that start high overhead and sink past you as you climb, until the
+    // cloud bank swallows them
+    function drawWisps(alt) {
+        const alpha = 0.85 * clamp((4 - alt) / 0.6);
+        if (alpha <= 0) return;
+        const span = w + PX * 80;
+        const base = h * (0.08 + alt * 0.22);
+        wisps.forEach(p => {
+            const x = ((p.x + drift * p.speed) % span + span) % span - PX * 40;
+            drawCloud(x, base + p.y, p.parts, alpha);
+        });
+    }
+
+    // The cloud bank: a puffy top edge with fog below it. While you're inside it the fog is thin
+    // and the city shows through; above it, it thickens into a sea of clouds.
+    function drawBank(alt) {
+        const appear = clamp((alt - 2.7) / 0.5);
+        if (appear <= 0) return;
+        const top = bankTop(alt) * h;
+        const body = Math.max(0.25, Math.min(0.92, (alt - 3) / 3.5)) * appear;
+        const fog = ctx.createLinearGradient(0, top, 0, h);
+        fog.addColorStop(0, rgba(pal.cloud.map((v, k) => Math.round(v * 0.6 + pal.shade[k] * 0.4)), body));
+        fog.addColorStop(1, rgba(pal.shade, body));
+        ctx.fillStyle = fog;
+        ctx.fillRect(0, snap(top + PX * 4), w, h);
+        const step = PX * 22;
+        const span = bank.length * step;
+        bank.forEach(p => {
+            const x = ((p.x + drift * 0.5) % span + span) % span - step;
+            drawCloud(x, top + p.y, p.parts, 0.95 * appear);
+        });
+    }
+
+    // Penthouse and Rooftop: the city's three tallest towers, the only buildings that still
+    // reach above the clouds. Their bases are lost in the cloud bank (drawn over them next),
+    // and they sink lower as you climb, with gold beacons on top at the Rooftop.
+    function drawSpires(now, alt) {
+        const show = clamp((alt - 4.6) / 0.6);
+        if (show <= 0) return;
+        const top = bankTop(alt) * h;
+        const rise = h * Math.max(0.07, 0.24 - (alt - 5) * 0.06);
+        const body = rgb(pal.shade.map(v => Math.round(v * 0.25 + 18)));
+        ctx.globalAlpha = show;
+        [[0.14, 10, 1], [0.86, 8, 0.8], [0.66, 6, 0.6]].forEach(([fx, cols, tall], i) => {
+            const bw = PX * cols;
+            const x = snap(w * fx - bw / 2);
+            const y = snap(top - rise * tall);
+            ctx.fillStyle = body;
+            ctx.fillRect(x, y, bw, top + PX * 8 - y);                     // the tower, down into the clouds
+            ctx.fillRect(x + PX * 2, y - PX * 4, bw - PX * 4, PX * 4);    // a stepped crown
+            ctx.fillRect(x + bw / 2 - PX / 2, y - PX * 14, PX, PX * 10);  // the spire
+            ctx.fillStyle = "rgba(245, 196, 81, 0.55)";                   // a few lit windows
+            for (let wy = y + PX * 3; wy < top; wy += PX * 4) {
+                for (let wx = x + PX * 2; wx < x + bw - PX * 2; wx += PX * 3) {
+                    if ((wx * 7 + wy * 3 + i) % 5 === 0) ctx.fillRect(wx, wy, PX, PX);
+                }
+            }
+            if (reduceMotion || Math.sin(now / 500 + i * 2) > 0.2) {
+                ctx.fillStyle = scene.fx[6] > 0.5 ? "#ffd75e" : "#f26d6d";
+                ctx.fillRect(x + bw / 2 - PX, y - PX * 15, PX * 2, PX * 2);
+            }
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    // Boardroom and above: gold dust drifting up through the scene
+    function drawSparkles(now, dt) {
+        sparkles.forEach(sp => {
+            if (!reduceMotion) {
+                sp.y -= dt * sp.speed;
+                if (sp.y < -PX) { sp.y = h + PX; sp.x = Math.random() * w; }
+            }
+            // Pale gold so they show against the sunset; at the top of each twinkle a
+            // sparkle flashes into a little pixel cross
+            const twinkle = 0.5 + 0.5 * Math.sin(now / 300 + sp.phase);
+            const x = snap(sp.x), y = snap(sp.y);
+            ctx.fillStyle = `rgba(255, 236, 170, ${((0.35 + 0.6 * twinkle) * scene.fx[4]).toFixed(3)})`;
+            ctx.fillRect(x, y, PX, PX);
+            if (twinkle > 0.85) {
+                ctx.fillRect(x - PX, y, PX, PX);
+                ctx.fillRect(x + PX, y, PX, PX);
+                ctx.fillRect(x, y - PX, PX, PX);
+                ctx.fillRect(x, y + PX, PX, PX);
+            }
+        });
+    }
+
     // A gold balcony railing along the bottom of the screen (Penthouse and above).
     // It slides up into view as its fade goes from 0 to 1.
     function drawRailing(now) {
         const shown = scene.fx[5];
         const railH = PX * 16;
-        const top = Math.round((h - railH + (1 - shown) * railH * 1.5) / PX) * PX;
+        const top = snap(h - railH + (1 - shown) * railH * 1.5);
         ctx.globalAlpha = shown;
         ctx.fillStyle = "#1a1422";                           // dark marble floor
         ctx.fillRect(0, top + railH - PX * 3, w, PX * 3);
@@ -350,50 +711,21 @@ function startHomeChart() {
         ctx.fillStyle = "rgba(255, 240, 200, 0.6)";
         ctx.fillRect(0, top + PX, w, 1);
 
-        // Rooftop: a string of warm bulbs above the rail
+        // Rooftop: a string of party bulbs hung above the rail, in colours that show
+        // against the gold sky, on a dark wire
         if (scene.fx[6] > 0.01) {
             ctx.globalAlpha = scene.fx[6];
-            for (let x = PX * 4, i = 0; x < w; x += PX * 8, i++) {
-                const sag = Math.round(Math.sin((x / w) * Math.PI * 6) * PX) - PX * 6;
-                const on = reduceMotion || Math.sin(now / 400 + i) > -0.6;
-                ctx.fillStyle = on ? (i % 2 ? "#ffe9a8" : "#f5c451") : "#6b5523";
-                ctx.fillRect(x, top + sag, PX, PX);
+            const bulbs = ["#ff6b6b", "#ffffff", "#5bc0ff", "#7dff9a", "#ff9ad5"];
+            const hang = (x) => top - PX * 8 + snap(Math.abs(Math.sin((x / w) * Math.PI * 5)) * PX * 4);
+            ctx.fillStyle = "#2a1c12";
+            for (let x = 0; x < w; x += PX) ctx.fillRect(x, hang(x), PX, 1);
+            for (let x = PX * 3, i = 0; x < w; x += PX * 9, i++) {
+                const on = reduceMotion || Math.sin(now / 350 + i * 1.3) > -0.5;
+                ctx.fillStyle = on ? bulbs[i % bulbs.length] : "#5a4630";
+                ctx.fillRect(x, hang(x) + 1, PX * 2, PX * 2);
             }
         }
         ctx.globalAlpha = 1;
-    }
-
-    // Rooftop fireworks: a small pixel burst in the sky every few seconds
-    function drawFireworks(now) {
-        if (reduceMotion) return;
-        if (now > nextBurst) {
-            nextBurst = now + 2500 + Math.random() * 2500;
-            bursts.push({ x: w * (0.15 + Math.random() * 0.7), y: h * (0.1 + Math.random() * 0.3), start: now,
-                colour: Math.random() < 0.6 ? "245, 196, 81" : "76, 195, 138" });
-        }
-        bursts = bursts.filter(b => now - b.start < 1400);
-        bursts.forEach(b => {
-            const t = (now - b.start) / 1400;
-            const r = 8 + t * 60;
-            ctx.fillStyle = `rgba(${b.colour}, ${(0.8 * (1 - t) * scene.fx[6]).toFixed(3)})`;
-            for (let i = 0; i < 14; i++) {
-                const a = (i / 14) * Math.PI * 2;
-                const px = Math.round((b.x + Math.cos(a) * r) / PX) * PX;
-                const py = Math.round((b.y + Math.sin(a) * r + t * t * 20) / PX) * PX;
-                ctx.fillRect(px, py, PX, PX);
-            }
-        });
-    }
-
-    // The sky chart: wide, faint candles in the top half of the screen
-    const CW = PX * 4, GAP = PX * 3;
-    function nextCandle(prev) {
-        const open = prev ? prev.close : h * 0.32;
-        let close = open + (Math.random() - 0.5) * h * 0.06;
-        close += (h * 0.32 - close) * 0.08;   // drift back towards the middle of the sky
-        const high = Math.min(open, close) - Math.random() * h * 0.025;
-        const low = Math.max(open, close) + Math.random() * h * 0.025;
-        return { open, close, high, low };
     }
 
     function resize() {
@@ -402,7 +734,7 @@ function startHomeChart() {
         canvas.width = w * dpr;
         canvas.height = h * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        buildCity();
+        build();
         const count = Math.ceil(w / (CW + GAP)) + 3;
         while (candles.length < count) candles.push(nextCandle(candles[candles.length - 1]));
     }
@@ -416,74 +748,37 @@ function startHomeChart() {
             candles.shift();
             candles.push(nextCandle(candles[candles.length - 1]));
         }
+        if (!reduceMotion) drift += dt * 0.01;
 
         // Ease towards the current position and level, and fade each level's touch in or out
         const ease = Math.min(1, dt * 0.0025);
         scene.now += (scene.target - scene.now) * ease;
         scene.lv += (scene.lvTarget - scene.lv) * ease;
         scene.fx = scene.fx.map((v, i) => v + ((scene.lvTarget >= i ? 1 : 0) - v) * ease);
-        // Each level drops the city a clear step further below you, a little more as your balance
-        // grows within the level (at most ~22% of the screen, so rooftops still peek up at the top)
-        const sink = Math.round(Math.min(scene.now, LEVELS.length) / LEVELS.length * 0.22 * h / PX) * PX;
+        const alt = scene.now;
+        pal = palette();
 
+        // From the back of the scene to the front
         drawSky();
-
-        // Stars fade as the sky gets lighter
-        const starLight = 1 - 0.85 * scene.lv / (LEVELS.length - 1);
+        const starLight = 1 - 0.85 * scene.lv / (LEVELS.length - 1);   // stars fade as the sky lightens
         stars.forEach(st => {
-            ctx.fillStyle = `rgba(242, 244, 247, ${((0.15 + 0.15 * Math.sin(now / 900 + st.phase)) * starLight).toFixed(3)})`;
-            ctx.fillRect(st.x, st.y, 2, 2);
+            ctx.fillStyle = `rgba(242, 244, 247, ${((0.18 + 0.15 * Math.sin(now / 900 + st.phase)) * starLight).toFixed(3)})`;
+            ctx.fillRect(st.x, st.y, st.size, st.size);
         });
-
+        drawMoon();
+        drawEveningStar(now);
+        drawNeon();
+        drawSun(now, alt);
         if (scene.fx[1] > 0.01) drawSearchlights(now);
-
-        // Heights stay on the pixel grid, but the sideways drift is smooth (no snapping),
-        // and candles fade in at the right edge and out at the left
-        const snap = (v) => Math.round(v / PX) * PX;
-        const edge = w * 0.18;
-        candles.forEach((c, i) => {
-            const x = i * (CW + GAP) - offset;
-            const fade = Math.max(0, Math.min(1, (x + CW) / edge, (w - x) / edge));
-            if (fade === 0) return;
-            const alpha = (0.13 * fade).toFixed(3);
-            ctx.fillStyle = c.close <= c.open ? `rgba(76, 195, 138, ${alpha})` : `rgba(242, 109, 109, ${alpha})`;
-            ctx.fillRect(x + CW / 2 - 1, snap(c.high), PX - 1, snap(c.low) - snap(c.high));
-            ctx.fillRect(x, snap(Math.min(c.open, c.close)), CW, Math.max(PX, snap(Math.abs(c.close - c.open))));
-        });
-
+        drawCandles();
         if (scene.fx[2] > 0.01) drawBlimp(now);
         if (scene.fx[3] > 0.01) drawHelicopter(now);
         if (scene.fx[6] > 0.01) drawFireworks(now);
-
-        ctx.drawImage(skyline, 0, sink, w, h);
-
-        // Flickering windows and blinking antenna lights
-        windows.forEach(win => {
-            if (Math.random() < 0.002) win.on = !win.on;
-            if (!win.on) return;
-            ctx.fillStyle = "rgba(245, 196, 81, 0.7)";
-            ctx.fillRect(win.x, win.y + sink, PX, PX);
-        });
-        lights.forEach(l => {
-            if (Math.sin(now / 500 + l.phase) > 0.3) {
-                ctx.fillStyle = "rgba(242, 109, 109, 0.9)";
-                ctx.fillRect(l.x - 1, l.y + sink, PX + 2, PX);
-            }
-        });
-
-        // Boardroom and above: gold dust drifting up through the scene
-        if (scene.fx[4] > 0.01) {
-            sparkles.forEach(sp => {
-                if (!reduceMotion) {
-                    sp.y -= dt * sp.speed;
-                    if (sp.y < -PX) { sp.y = h + PX; sp.x = Math.random() * w; }
-                }
-                const twinkle = 0.5 + 0.5 * Math.sin(now / 300 + sp.phase);
-                ctx.fillStyle = `rgba(245, 196, 81, ${(0.55 * twinkle * scene.fx[4]).toFixed(3)})`;
-                ctx.fillRect(Math.round(sp.x / PX) * PX, Math.round(sp.y / PX) * PX, PX - 1, PX - 1);
-            });
-        }
-
+        drawCity(now, alt);
+        drawWisps(alt);
+        drawSpires(now, alt);
+        drawBank(alt);
+        if (scene.fx[4] > 0.01) drawSparkles(now, dt);
         if (scene.fx[5] > 0.01) drawRailing(now);
 
         if (!reduceMotion) homeChartFrame = requestAnimationFrame(draw);
