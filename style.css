@@ -878,14 +878,32 @@ code {
 .tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* ---------- Bottom bar ---------- */
+/* No solid bar: the buttons sit on the city itself. A soft fade (clear at the top, a little
+   darker towards the bottom) keeps the hint text readable over the lit windows. */
 .actions {
     position: sticky;
     bottom: 0;
     z-index: 2;
-    padding: 14px 16px 24px;
-    background: rgba(13, 17, 26, 0.92);
-    box-shadow: 0 -1px 0 var(--border-soft);
+    isolation: isolate;
+    padding: 30px 16px 24px;
+    background: linear-gradient(to bottom, rgba(8, 11, 20, 0) 0%, rgba(8, 11, 20, 0.45) 40%, rgba(8, 11, 20, 0.7) 100%);
 }
+
+/* A blur that fades in towards the bottom: the city still shows through, but a long card
+   scrolling underneath turns soft instead of clashing with the hint text */
+.actions::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 28%);
+}
+
+.actions .hint, .actions .tab { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8); }
 
 .step {
     max-width: 680px;

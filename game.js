@@ -705,6 +705,12 @@ function finishClimb() {
     if (pendingClimb) pendingClimb();
 }
 
+// A new round or the menu starts from a fresh balance, so a climb still waiting is dropped
+function cancelClimb() {
+    clearTimeout(climbTimer);
+    pendingClimb = null;
+}
+
 
 // ---------- 3. The menu: Today, Week and Practice tabs ----------
 let currentTab = "today";
@@ -725,11 +731,11 @@ function showHub(tab) {
     results = day ? day.results.slice() : [];
     cardIndex = results.length;
     portfolio = weekBalance(week);
-    $("portfolio").textContent = money(portfolio);
+    showPortfolio();
     showReturn();
     showSquares();
     $("progress").textContent = deck.length ? "Today" : isWeekend(key) ? "Market closed" : "No new cards";
-    finishClimb();
+    cancelClimb();
     showTower(portfolio);
     setSceneTower(portfolio);
 
@@ -1050,9 +1056,9 @@ function startRound() {
     cardIndex = 0;
     results = [];
     portfolio = START_VALUE;
-    $("portfolio").textContent = money(portfolio);
+    showPortfolio();
     showReturn();
-    finishClimb();
+    cancelClimb();
     showTower(portfolio);   // a practice round starts in the Lobby with its own $10,000
     setSceneTower(portfolio);
     showCard();
@@ -1074,7 +1080,7 @@ function startDaily() {
     results = day.results.slice();
     cardIndex = results.length;
     portfolio = dayEnd(day);
-    $("portfolio").textContent = money(portfolio);
+    showPortfolio();
     showReturn();
     showTower(portfolio);
     setSceneTower(portfolio);
@@ -1400,14 +1406,25 @@ function setVerdict(id, text, right) {
 }
 
 // Make a number count from one value to another, fast at first then slowing down
+// Show the portfolio in the top bar straight away, stopping any count still running from
+// the last reveal (otherwise a quick "Play again" could end on the old round's number)
+function showPortfolio() {
+    $("portfolio").counting = null;
+    $("portfolio").textContent = money(portfolio);
+}
+
 function animateNumber(el, from, to, format, delay) {
-    if (reduceMotion) { el.textContent = format(to); return; }
+    if (reduceMotion) { el.counting = null; el.textContent = format(to); return; }
 
     const duration = 1100;
     const start = performance.now() + delay;
     el.textContent = format(from);
+    // Remember which count is running, so a newer one (or showPortfolio) can stop this one
+    const token = {};
+    el.counting = token;
 
     function tick(now) {
+        if (el.counting !== token) return;
         const progress = Math.min(1, Math.max(0, (now - start) / duration));
         const eased = 1 - Math.pow(1 - progress, 3);
         el.textContent = format(from + (to - from) * eased);
