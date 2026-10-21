@@ -20,8 +20,9 @@
     --down-bg: #3A1D20;
     --down-chip: #3A1D20;
     --down-edge: #9A3B3B;
-    --font: "Rubik", system-ui, sans-serif;
-    --pixel: "Silkscreen", "Rubik", monospace;   /* the home title only */
+    --font: "Space Grotesk", system-ui, sans-serif;
+    --num: "JetBrains Mono", ui-monospace, monospace;   /* numbers: money, prices, %, countdown */
+    --pixel: "Silkscreen", "Space Grotesk", monospace;  /* the home title only */
     --serif: var(--font);
     --sans: var(--font);
     --mono: var(--font);
@@ -876,6 +877,15 @@ code {
 .tab:hover { color: var(--text); }
 .tab.active { background: var(--raised); color: var(--gold); box-shadow: 0 3px 0 var(--edge); }
 .tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ---------- Numbers in the terminal font ---------- */
+/* Small data numbers only: big display numbers and word-and-number stats stay in Space Grotesk */
+.hud-value, #pnl, .rows .num, .chip, .grid-pnl, .day-pnl,
+.count-tile strong, .tower-min, .tower-marker, .past-ret,
+.btn span, .floor-num {
+    font-family: var(--num);
+    letter-spacing: -0.02em;
+}
 
 /* ---------- Bottom bar ---------- */
 /* No solid bar: the buttons sit on the city itself. A soft fade (clear at the top, a little

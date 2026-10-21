@@ -1334,7 +1334,7 @@ function drawWeekChart(values, labels) {
             <line x1="${PAD}" y1="${startY}" x2="${W - PAD}" y2="${startY}" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="3 4"></line>
             <path d="${linePath}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
             ${points.map(([px, py]) => `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${colour}"></circle>`).join("")}
-            ${labels.map((label, i) => `<text x="${x(i).toFixed(1)}" y="${H + 14}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="11" text-anchor="middle">${label}</text>`).join("")}
+            ${labels.map((label, i) => `<text x="${x(i).toFixed(1)}" y="${H + 14}" fill="var(--muted)" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">${label}</text>`).join("")}
         </svg>`;
 }
 
@@ -1857,7 +1857,7 @@ function drawCandles(boxId, candles, opts) {
         const gy = f(y(fromUnit(u)));
         parts += `<line x1="0" y1="${gy}" x2="${plotW}" y2="${gy}" stroke="var(--border-soft)" stroke-width="1"></line>`;
         if (opts.axis) {
-            parts += `<text x="${W - 4}" y="${f(y(fromUnit(u)) + 4)}" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="10" text-anchor="end">${label(Math.round(u * 100) / 100)}</text>`;
+            parts += `<text x="${W - 4}" y="${f(y(fromUnit(u)) + 4)}" fill="var(--muted)" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="end">${label(Math.round(u * 100) / 100)}</text>`;
         }
     }
     parts += `<line x1="0" y1="${PRICE_BOTTOM}" x2="${plotW}" y2="${PRICE_BOTTOM}" stroke="var(--border)" stroke-width="1"></line>`;
@@ -1865,7 +1865,7 @@ function drawCandles(boxId, candles, opts) {
     if (opts.marker != null) {
         const mx = f(x(opts.marker) + slot / 2);
         parts += `<line x1="${mx}" y1="${TOP - 4}" x2="${mx}" y2="${H}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"></line>
-            <text x="${mx}" y="10" fill="var(--muted)" font-family="Rubik, sans-serif" font-size="10" text-anchor="end">results&#8202;</text>`;
+            <text x="${mx}" y="10" fill="var(--muted)" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="end">results&#8202;</text>`;
     }
 
     candles.forEach((k, i) => {
@@ -1874,7 +1874,7 @@ function drawCandles(boxId, candles, opts) {
             // The opening price as a gold dash, labelled just above (or below, if it's at the top)
             const labelY = y(o) < TOP + 14 ? y(o) + 16 : y(o) - 8;
             parts += `<g class="dot-pop"><line x1="${f(x(i) - Math.max(body, 6))}" y1="${f(y(o))}" x2="${f(x(i) + Math.max(body, 6))}" y2="${f(y(o))}" stroke="var(--gold)" stroke-width="3" stroke-linecap="round"></line>
-                <text x="${f(x(i))}" y="${f(labelY)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="end">open</text></g>`;
+                <text x="${f(x(i))}" y="${f(labelY)}" fill="var(--gold)" font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" text-anchor="end">open</text></g>`;
             return;
         }
         const colour = c >= o ? "var(--up)" : "var(--down)";
@@ -1906,7 +1906,7 @@ function drawCandles(boxId, candles, opts) {
         tagY = Math.min(Math.max(tagY, TOP), PRICE_BOTTOM - tagH);
         const tagX = Math.max(0, ex - tagW + 6);
         parts += `<rect x="${f(tagX)}" y="${f(tagY)}" width="${f(tagW)}" height="${tagH}" rx="5" fill="var(--bg)" stroke="var(--gold)" stroke-width="1"></rect>
-            <text x="${f(tagX + tagW / 2)}" y="${f(tagY + 12.5)}" fill="var(--gold)" font-family="Rubik, sans-serif" font-size="11" font-weight="600" text-anchor="middle">${opts.entry.label}</text>`;
+            <text x="${f(tagX + tagW / 2)}" y="${f(tagY + 12.5)}" fill="var(--gold)" font-family="JetBrains Mono, monospace" font-size="11" font-weight="600" text-anchor="middle">${opts.entry.label}</text>`;
     }
     // Where the trade ended
     if (opts.exit) {
@@ -1918,7 +1918,7 @@ function drawCandles(boxId, candles, opts) {
         const last = candles[n - 1];
         const colour = last[3] >= candles[n - 2][3] ? "var(--up)" : "var(--down)";
         parts += `<rect x="${plotW + 2}" y="${f(y(last[3]) - 8)}" width="${AXIS - 2}" height="16" rx="3" fill="${colour}"></rect>
-            <text x="${W - 4}" y="${f(y(last[3]) + 4)}" fill="var(--bg)" font-family="Rubik, sans-serif" font-size="10" font-weight="700" text-anchor="end">${base ? signedPct(pct(base, last[3])) : last[3].toFixed(2)}</text>`;
+            <text x="${W - 4}" y="${f(y(last[3]) + 4)}" fill="var(--bg)" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" text-anchor="end">${base ? signedPct(pct(base, last[3])) : last[3].toFixed(2)}</text>`;
     }
 
     if (opts.hover) {
