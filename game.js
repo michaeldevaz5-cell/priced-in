@@ -1259,16 +1259,19 @@ function showWeek(key, week) {
     stats.innerHTML = "";
     $("week-compare").textContent = "";
     if (all.length) {
-        const best = all.reduce((a, b) => (b.pnl > a.pnl ? b : a));
-        const worst = all.reduce((a, b) => (b.pnl < a.pnl ? b : a));
-        const biggest = all.reduce((a, b) => (b.stake > a.stake ? b : a));
+        // Cards you stayed out of aren't trades, so they don't count for best, worst or biggest
         const trades = all.filter(r => r.side !== "out");
         addStat(stats, "Tower", levelText(levelFor(balance)), "gold");
         addStat(stats, "Right way round", `${trades.filter(r => r.dirRight).length} of ${trades.length}`);
         addStat(stats, "Better exit", `${trades.filter(r => r.timingRight).length} of ${trades.length}`);
-        addStat(stats, "Biggest trade", `${money(biggest.stake)} · ${biggest.company}`);
-        addStat(stats, "Best call", `${signedMoney(best.pnl)} · ${best.company}`, best.pnl >= 0 ? "is-up" : "is-down");
-        addStat(stats, worst.pnl >= 0 ? "Smallest win" : "Worst call", `${signedMoney(worst.pnl)} · ${worst.company}`, worst.pnl >= 0 ? "is-up" : "is-down");
+        if (trades.length) {
+            const best = trades.reduce((a, b) => (b.pnl > a.pnl ? b : a));
+            const worst = trades.reduce((a, b) => (b.pnl < a.pnl ? b : a));
+            const biggest = trades.reduce((a, b) => (b.stake > a.stake ? b : a));
+            addStat(stats, "Biggest trade", `${money(biggest.stake)} · ${biggest.company}`);
+            addStat(stats, "Best call", `${signedMoney(best.pnl)} · ${best.company}`, best.pnl >= 0 ? "is-up" : "is-down");
+            addStat(stats, worst.pnl >= 0 ? "Smallest win" : "Worst call", `${signedMoney(worst.pnl)} · ${worst.company}`, worst.pnl >= 0 ? "is-up" : "is-down");
+        }
         $("week-compare").textContent = compareWithHolding(all, balance);
     }
 
