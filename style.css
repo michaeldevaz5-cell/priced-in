@@ -318,7 +318,7 @@ body.in-game .bg-chart { opacity: 0.7; }
     gap: 6px;
 }
 
-.squares { display: flex; gap: 4px; }
+.squares { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 340px; }   /* wraps when a practice round has many cards */
 
 .squares i {
     width: 16px;

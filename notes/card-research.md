@@ -152,22 +152,22 @@ How they were chosen:
 
 | # | Company, results day | Industry | Open | Close | Type |
 |---|---|---|---|---|---|
-| A | Lyft, 13 Feb 2024 | Ride hailing | +23.5% | +35.1% | Good → up, holding paid |
+| A | Lyft, 13 Feb 2024 | Ride hailing | +23.5% | +35.1% | Good → up, holding paid. ✅ Card 19 (draft) |
 | B | United Airlines, 15 Oct 2024 | Airline | +2.1% | +12.4% | Good → up, holding paid a lot. ✅ Card 16 |
-| C | Mattel, 23 Jul 2025 | Toys | −6.5% | −16.4% | Bad → down, got worse all day |
-| D | Align Technology, 30 Jul 2025 | Dental (clear braces) | −30.0% | −36.6% | Bad → down |
+| C | Mattel, 23 Jul 2025 | Toys | −6.5% | −16.4% | Bad → down, got worse all day. ✅ Card 26 (draft) |
+| D | Align Technology, 30 Jul 2025 | Dental (clear braces) | −30.0% | −36.6% | Bad → down. ✅ Card 30 (draft) |
 | E | Carvana, 19 Feb 2025 | Used cars online | −6.0% | −12.1% | Beat, but fell |
 | F | Starbucks, 29 Jul 2025 | Coffee chain | +5.2% | −0.2% | Missed, opened up, faded to flat (small) |
 | G | e.l.f. Beauty, 6 Feb 2025 | Cosmetics | −25.1% | −19.6% | Guidance cut → down, recovered a bit. ✅ Card 17 |
-| H | Ford, 24 Jul 2024 | Car maker | −13.7% | −18.4% | Bad → down |
-| I | Rivian, 7 May 2024 | Electric vehicles | −7.2% | +0.2% | Missed, opened down, closed flat (small) |
-| J | Gap, 21 Nov 2024 | Clothing retail | +17.1% | +12.8% | Good → up, exiting at the open paid |
+| H | Ford, 24 Jul 2024 | Car maker | −13.7% | −18.4% | Bad → down. ✅ Card 23 (draft) |
+| I | Rivian, 7 May 2024 | Electric vehicles | −7.2% | +0.2% | Missed, opened down, closed flat (small). ✅ Card 27 (draft) |
+| J | Gap, 21 Nov 2024 | Clothing retail | +17.1% | +12.8% | Good → up, exiting at the open paid. ✅ Card 22 (draft) |
 | K | Booking Holdings, 20 Feb 2025 | Online travel | +3.9% | −0.5% | Beat, opened up, faded (small) |
-| L | Chipotle, 29 Oct 2025 | Restaurants | −21.4% | −18.2% | Bad → down |
+| L | Chipotle, 29 Oct 2025 | Restaurants | −21.4% | −18.2% | Bad → down. ✅ Card 20 (draft) |
 | M | Mondelez, 4 Feb 2025 | Snacks (chocolate, biscuits) | −3.3% | +2.3% | Missed and weak outlook, but rose (small) |
-| N | Capital One, 22 Jul 2025 | Bank / credit cards | +4.8% | +0.9% | Beat, opened up, faded (small) |
-| O | Monster Beverage, 8 May 2025 | Energy drinks | −2.2% | +1.4% | Sales miss, opened down, closed up (small) |
-| P | Deckers, 30 Jan 2025 | Footwear | −12.1% | −20.5% | Beat and raised, but fell |
+| N | Capital One, 22 Jul 2025 | Bank / credit cards | +4.8% | +0.9% | Beat, opened up, faded (small). ✅ Card 21 (draft) |
+| O | Monster Beverage, 8 May 2025 | Energy drinks | −2.2% | +1.4% | Sales miss, opened down, closed up (small). ✅ Card 24 (draft) |
+| P | Deckers, 30 Jan 2025 | Footwear | −12.1% | −20.5% | Beat and raised, but fell. ✅ Card 25 (draft) |
 
 Balance: 8 closed up, 8 closed down; 6 small moves. On 9, a trade in the direction of the open did better exiting at the open (F, G, I, J, K, L, M, N, O); on 7, holding did better (A, B, C, D, E, H, P). So neither "always exit" nor "always hold" wins. **Clashes:** F and L are both restaurants; H and I are both car makers, and Tesla is already in week 1. Pick one of each pair, or space them apart.
 

@@ -19,7 +19,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 
 - **Michael (the owner)** writes every scenario in `puzzles.json` and makes the product decisions. He's learning to code and finance, so explain jargon and keep explanations short and plain.
 - **Claude writes the code.** Michael hand-wrote the first version; the README and the header comment in `game.js` say this, and they must stay accurate.
-- **Never write or rewrite scenario text** (`disguise`, `mood`, `otherNews`, `why`, `tag`) unless Michael explicitly asks for that one card. You may check his numbers, fix JSON syntax and point out problems.
+- **Never write or rewrite scenario text** (`disguise`, `mood`, `otherNews`, `why`, `tag`) unless Michael explicitly asks for that one card. **Exception (21 Oct 2026):** Michael asked Claude to draft cards 19–30 (week 2, Tue 3 – Fri 6 Nov) in full; drafts and review notes are in `notes/week2-drafts.md`, and Michael edits and approves them. You may check his numbers, fix JSON syntax and point out problems.
 - **Every figure must be real and sourced.** Don't invent or "round to look nice". If a number can't be verified, say so.
 - **Be honest**, including when the answer is "this doesn't need doing".
 
@@ -114,7 +114,7 @@ Before saying a change works:
 
 ## Current state (19 Oct 2026)
 
-- **Cards:** 17 so far, in `puzzles.json`:
+- **Cards:** 29 so far (card 18, Carvana, is Michael's and not written yet; when it's added it must go **between e.l.f. Beauty (17) and Lyft (19)** so Monday 2 Nov gets it, not at the end), in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -132,6 +132,7 @@ Before saying a change works:
   - Meta, Oct 2024: has `candles`; third Meta card; beat but fell 4.1% on an AI-spending warning; opened −1.1%, so holding a short paid off; `otherNews` drafted by Claude, disguise changed from "metaverse pioneer" at Michael's request
   - United Airlines, Oct 2024: has `candles`; first card of week 2 (Mon 2 Nov); opened +2.1%, closed +12.4%, so holding paid; `otherNews` drafted by Claude at Michael's request; mood's fuel-cost fear checked against Brent crude (+13% in early Oct 2024)
   - e.l.f. Beauty, Feb 2025: has `candles`; Mon 2 Nov; sales beat, guidance cut, opened −25.1%, closed −19.6%; `otherNews` drafted by Claude; mood changed from "cautiously optimistic" (the stock had fallen 37% in seven weeks) and the tariff line softened (management said tariffs wouldn't hit this year) at Michael's request
+  - Cards 19–30, drafted by Claude at Michael's request (see `notes/week2-drafts.md`): Lyft Feb 2024, Chipotle Oct 2025, Capital One Jul 2025 (Tue 3 Nov); Gap Nov 2024, Ford Jul 2024, Monster Beverage May 2025 (Wed 4 Nov); Deckers Jan 2025, Mattel Jul 2025, Rivian May 2024 (Thu 5 Nov); Lululemon Dec 2024, Costco Mar 2025, Align Technology Jul 2025 (Fri 6 Nov). All have 60 candles (Monster ×2 for its Aug 2026 split).
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Launch week (26–30 Oct) is full: 15 cards.** Next: 15 for week 2 (2–6 Nov). Michael planned 4 cards on 19 Oct (Tesla, Netflix, Meta done; 1 more for week 2). Tesla Apr 2024 was dropped: its open and close were almost the same. Pick days where the open and close differ a lot.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
