@@ -887,6 +887,32 @@ code {
     letter-spacing: -0.02em;
 }
 
+/* ---------- Card and reveal: terminal-style headline and labels ----------
+   The headline gets a "> " prompt above it and a blinking gold cursor after it.
+   The mood and news text stay in Space Grotesk so they're easy to read. */
+#card .headline, #reveal .headline {
+    font-family: var(--num);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+#card .kicker, #reveal .kicker, #card .label, #reveal .label, #card .rows th {
+    font-family: var(--num);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#card .kicker::before, #reveal .kicker::before { content: "> "; }
+
+#card .headline::after, #reveal .headline::after {
+    content: "_";
+    color: var(--gold);
+    animation: cursor-blink 1.1s steps(1) infinite;
+}
+
+@keyframes cursor-blink { 50% { opacity: 0; } }
+
 /* ---------- Bottom bar ---------- */
 /* No solid bar: the buttons sit on the city itself. A soft fade (clear at the top, a little
    darker towards the bottom) keeps the hint text readable over the lit windows. */
@@ -1046,6 +1072,7 @@ code {
 
 /* Respect people who turn animations off */
 @media (prefers-reduced-motion: reduce) {
+    #card .headline::after, #reveal .headline::after { animation: none; }
     .fade-up, .area-fade, .dot-pop { animation: none; opacity: 1; transform: none; }
     .line-draw { animation: none; stroke-dashoffset: 0; }
     .enter, .shake { animation: none; }
