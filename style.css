@@ -505,6 +505,12 @@ body.in-game .bg-chart { opacity: 0.7; }
     .next-level { display: none; }
 }
 
+/* Practice: the tower is for weekly gains, so it's hidden during a practice round */
+body.in-practice .floor,
+body.in-practice .next-level,
+body.in-practice .tower,
+body.in-practice .floor-toast { display: none !important; }
+
 /* Banner when you reach a new level */
 .floor-toast {
     position: fixed;

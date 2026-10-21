@@ -927,7 +927,6 @@ function towerPos(balance) {
 // "Level 3 · Corner office" (the street has no number)
 const levelText = (i) => (i === 0 ? "Street level" : `Level ${i} · ${LEVELS[i].name}`);
 // For sentences: "on level 3, the corner office"
-const levelPhrase = (i) => (i === 0 ? "out on the street" : `on level ${i}, the ${LEVELS[i].name.toLowerCase()}`);
 
 // Everything that shows your place on the tower: the elevator display in the top bar,
 // the scale on the left (laptops) and the "next level" line (phones and tablets)
@@ -1022,6 +1021,7 @@ function showHub(tab) {
 
     // The top bar shows this week's portfolio and today's squares
     mode = "daily";
+    document.body.classList.remove("in-practice");
     deck = todaysCards(key);
     results = day ? day.results.slice() : [];
     cardIndex = results.length;
@@ -1340,8 +1340,12 @@ function drawWeekChart(values, labels) {
 
 
 // ---------- 4. Round flow ----------
+// Practice runs every card in one go, so the balance swings far more than in a week:
+// the tower is calibrated for weekly gains, so it's hidden during practice
+// (body.in-practice) and the city stays at your weekly level.
 function startPractice() {
     mode = "practice";
+    document.body.classList.add("in-practice");
     deck = puzzles.slice();
     dailyKey = null;
     startRound();
@@ -1354,8 +1358,7 @@ function startRound() {
     showPortfolio();
     showReturn();
     cancelClimb();
-    showTower(portfolio);   // a practice round starts in the Lobby with its own $10,000
-    setSceneTower(portfolio);
+    setSceneTower(weekBalance(loadWeek()));   // the city stays at your weekly level
     showCard();
 }
 
@@ -1370,6 +1373,7 @@ function startDaily() {
     const day = week.days[key];
 
     mode = "daily";
+    document.body.classList.remove("in-practice");
     dailyKey = key;
     deck = todaysCards(key);
     results = day.results.slice();
@@ -1626,7 +1630,7 @@ function finishTrade(t, exit) {
     }
 
     showReveal(puzzle, result, before);
-    climb(before, portfolio);
+    if (mode === "daily") climb(before, portfolio);
 }
 
 
@@ -2076,7 +2080,7 @@ function showResults() {
     $("final-score").className = "headline big fade-up d1 " + (ret >= 0 ? "is-up" : "is-down");
     showSquares();
     animateNumber($("final-score"), START_VALUE, portfolio, v => money(v), 300);
-    $("final-line").textContent = `${retText} on your $10,000, and you finished ${levelPhrase(levelFor(portfolio))}. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
+    $("final-line").textContent = `${retText} on your $10,000. ${scoreLine(ret, results.filter(r => r.dirRight === false).length)}`;
 
     $("grid").innerHTML = "";
     buildGrid($("grid"), results);
@@ -2143,7 +2147,7 @@ function shareSquares(list) {
 }
 
 $("btn-share").addEventListener("click", () => {
-    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n🏢 ${levelText(levelFor(portfolio))}\n${SITE_URL}`;
+    const text = `Priced In practice: ${money(portfolio)} (${weekReturnText()})\n${shareSquares(results)}\n${SITE_URL}`;
     share(text, $("btn-share"));
 });
 
