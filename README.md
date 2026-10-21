@@ -10,7 +10,7 @@ The lesson running through it: prices move on **surprise versus expectations**, 
 
 ## Who made what
 
-- **Idea, game design and scenarios:** Michael. Every card in `puzzles.json` is a real event with the real price move and a source link. Claude helped research and check the figures, and at Michael's request drafted some card text: the Netflix card, the Palantir card (apart from its lesson tag), the "also announced" line on the Apple, Intel and Alphabet cards, the first two sentences of Intel's explanation, the "also announced" line on the second Meta, Oracle, Microsoft, Amazon, Tesla, second Netflix, third Meta and United Airlines cards, and the "also announced" line plus parts of the mood and explanation on the Nvidia card (replacing claims the sources didn't support).
+- **Idea, game design and scenarios:** Michael. Every card in `puzzles.json` is a real event with the real price move and a source link. Claude helped research and check the figures, and at Michael's request drafted some card text: the Netflix card, the Palantir card (apart from its lesson tag), the "also announced" line on the Apple, Intel and Alphabet cards, the first two sentences of Intel's explanation, the "also announced" line on the second Meta, Oracle, Microsoft, Amazon, Tesla, second Netflix, third Meta, United Airlines and e.l.f. Beauty cards, and the "also announced" line plus parts of the mood and explanation on the Nvidia card (replacing claims the sources didn't support).
 - **Code:** Michael hand-wrote the first version (page skeleton, loading the cards, results table, Up/Down buttons). The current code, including the styling and animations, was written by Claude (Anthropic's AI) at Michael's request. Commits say which is which.
 
 ## Adding a card

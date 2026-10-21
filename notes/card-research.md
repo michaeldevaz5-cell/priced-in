@@ -158,7 +158,7 @@ How they were chosen:
 | D | Align Technology, 30 Jul 2025 | Dental (clear braces) | −30.0% | −36.6% | Bad → down |
 | E | Carvana, 19 Feb 2025 | Used cars online | −6.0% | −12.1% | Beat, but fell |
 | F | Starbucks, 29 Jul 2025 | Coffee chain | +5.2% | −0.2% | Missed, opened up, faded to flat (small) |
-| G | e.l.f. Beauty, 6 Feb 2025 | Cosmetics | −25.1% | −19.6% | Guidance cut → down, recovered a bit |
+| G | e.l.f. Beauty, 6 Feb 2025 | Cosmetics | −25.1% | −19.6% | Guidance cut → down, recovered a bit. ✅ Card 17 |
 | H | Ford, 24 Jul 2024 | Car maker | −13.7% | −18.4% | Bad → down |
 | I | Rivian, 7 May 2024 | Electric vehicles | −7.2% | +0.2% | Missed, opened down, closed flat (small) |
 | J | Gap, 21 Nov 2024 | Clothing retail | +17.1% | +12.8% | Good → up, exiting at the open paid |
