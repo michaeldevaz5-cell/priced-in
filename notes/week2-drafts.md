@@ -2,7 +2,7 @@
 
 *Drafted by Claude on 21 Oct 2026 at Michael's request. Every figure is from the source listed; prices and moves are from Yahoo's daily history (split-adjusted where needed). Edit anything in `puzzles.json`; rewriting the `why` in your own words is the most useful change.*
 
-Carvana (card 18, Michael's) still needs writing. Until it's added, every card below plays one slot earlier.
+Carvana (card 18, Michael's) is in, so every card below plays on the day listed.
 
 **Things to check first:**
 - **Lyft:** the 500-basis-point typo was big news, so some players may recognise it.

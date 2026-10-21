@@ -156,7 +156,7 @@ How they were chosen:
 | B | United Airlines, 15 Oct 2024 | Airline | +2.1% | +12.4% | Good → up, holding paid a lot. ✅ Card 16 |
 | C | Mattel, 23 Jul 2025 | Toys | −6.5% | −16.4% | Bad → down, got worse all day. ✅ Card 26 (draft) |
 | D | Align Technology, 30 Jul 2025 | Dental (clear braces) | −30.0% | −36.6% | Bad → down. ✅ Card 30 (draft) |
-| E | Carvana, 19 Feb 2025 | Used cars online | −6.0% | −12.1% | Beat, but fell |
+| E | Carvana, 19 Feb 2025 | Used cars online | −6.0% | −12.1% | Beat, but fell. ✅ Card 18 |
 | F | Starbucks, 29 Jul 2025 | Coffee chain | +5.2% | −0.2% | Missed, opened up, faded to flat (small) |
 | G | e.l.f. Beauty, 6 Feb 2025 | Cosmetics | −25.1% | −19.6% | Guidance cut → down, recovered a bit. ✅ Card 17 |
 | H | Ford, 24 Jul 2024 | Car maker | −13.7% | −18.4% | Bad → down. ✅ Card 23 (draft) |
