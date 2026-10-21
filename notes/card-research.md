@@ -153,7 +153,7 @@ How they were chosen:
 | # | Company, results day | Industry | Open | Close | Type |
 |---|---|---|---|---|---|
 | A | Lyft, 13 Feb 2024 | Ride hailing | +23.5% | +35.1% | Good → up, holding paid |
-| B | United Airlines, 15 Oct 2024 | Airline | +2.1% | +12.4% | Good → up, holding paid a lot |
+| B | United Airlines, 15 Oct 2024 | Airline | +2.1% | +12.4% | Good → up, holding paid a lot. ✅ Card 16 |
 | C | Mattel, 23 Jul 2025 | Toys | −6.5% | −16.4% | Bad → down, got worse all day |
 | D | Align Technology, 30 Jul 2025 | Dental (clear braces) | −30.0% | −36.6% | Bad → down |
 | E | Carvana, 19 Feb 2025 | Used cars online | −6.0% | −12.1% | Beat, but fell |

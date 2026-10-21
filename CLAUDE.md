@@ -114,7 +114,7 @@ Before saying a change works:
 
 ## Current state (19 Oct 2026)
 
-- **Cards:** 15 so far, in `puzzles.json`:
+- **Cards:** 16 so far, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -130,6 +130,7 @@ Before saying a change works:
   - Tesla, Oct 2024: has `candles`; revenue missed, EPS and margins beat, rose 21.9% (best day in a decade); opened +14.5%, so holding paid off; `otherNews` drafted by Claude, disguise changed from "clean energy and autonomous mobility" at Michael's request
   - Netflix, Jan 2025: has `candles` (×10 for the Nov 2025 split); beat on everything, opened +14.8% but closed +9.7%, so exiting at the open paid off; `otherNews` drafted by Claude; unsupported "conservative guidance" dropped from `why` at Michael's request (the full-year forecast was raised)
   - Meta, Oct 2024: has `candles`; third Meta card; beat but fell 4.1% on an AI-spending warning; opened −1.1%, so holding a short paid off; `otherNews` drafted by Claude, disguise changed from "metaverse pioneer" at Michael's request
+  - United Airlines, Oct 2024: has `candles`; first card of week 2 (Mon 2 Nov); opened +2.1%, closed +12.4%, so holding paid; `otherNews` drafted by Claude at Michael's request; mood's fuel-cost fear checked against Brent crude (+13% in early Oct 2024)
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Launch week (26–30 Oct) is full: 15 cards.** Next: 15 for week 2 (2–6 Nov). Michael planned 4 cards on 19 Oct (Tesla, Netflix, Meta done; 1 more for week 2). Tesla Apr 2024 was dropped: its open and close were almost the same. Pick days where the open and close differ a lot.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
