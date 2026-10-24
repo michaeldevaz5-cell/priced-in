@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Priced In reel</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@700;800&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+    html, body { margin: 0; background: #000; }
+    canvas { display: block; width: 540px; height: 960px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Draws a vertical reel (1080x1920). ?mode=teaser|reveal|full&id=10 for one card, or
+// ?mode=list&list=beat-fell|jumps&played=15 for a top 5. ?t=4.5 shows one frame,
+// and record() plays it in real time and returns the video. make-reel.mjs drives it.
+// Not part of the game: the site never links here.
+
+const W = 1080, H = 1920;
+const C = {
+    panel: "rgba(20, 25, 33, 0.9)", border: "#2C3541", text: "#F2F4F7", soft: "#CBD2DB", muted: "#8F99A6",
+    gold: "#F5C451", up: "#4CC38A", down: "#F26D6D", upBg: "#183327", downBg: "#3A1D20"
+};
+const F = { font: '"Space Grotesk", sans-serif', num: '"JetBrains Mono", monospace', pixel: '"Silkscreen", monospace' };
+
+const params = new URLSearchParams(location.search);
+const ctx = document.getElementById("c").getContext("2d");
+let P, city, scan;
+
+// ---------- Helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+const prog = (t, start, dur) => ease((t - start) / dur);
+// 0 → 1 → 0 across a scene: fades in at the start, out at the end
+function vis(t, a, b) {
+    if (t < a || t > b) return 0;
+    return Math.min(ease((t - a) / 0.35), clamp((b - t) / 0.3));
+}
+
+function font(size, family = F.font, weight = 700) { return `${weight} ${size}px ${family}`; }
+
+function text(s, x, y, { size = 48, family = F.font, weight = 700, color = C.text, align = "left", alpha = 1, spacing = 0 } = {}) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.font = font(size, family, weight);
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.letterSpacing = spacing + "px";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+}
+
+// Text in coloured pieces, centred: [["It ", white], ["missed", red], ...]
+function pieces(parts, cx, y, size, alpha) {
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.font = font(size);
+    const total = parts.reduce((w, [s]) => w + ctx.measureText(s).width, 0);
+    let x = cx - total / 2;
+    for (const [s, color] of parts) {
+        ctx.fillStyle = color;
+        ctx.fillText(s, x, y);
+        x += ctx.measureText(s).width;
+    }
+    ctx.restore();
+}
+
+function wrap(s, maxW, size, family = F.font, weight = 500) {
+    ctx.save();
+    ctx.font = font(size, family, weight);
+    const lines = [];
+    let line = "";
+    for (const w of s.split(" ")) {
+        const next = line ? line + " " + w : w;
+        if (ctx.measureText(next).width > maxW && line) { lines.push(line); line = w; }
+        else line = next;
+    }
+    if (line) lines.push(line);
+    ctx.restore();
+    return lines;
+}
+
+function panel(x, y, w, h, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 28);
+    ctx.fillStyle = C.panel;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = C.border;
+    ctx.stroke();
+    ctx.restore();
+}
+
+// The home title: white with a green/red offset
+function pixelTitle(s, cx, y, size, alpha) {
+    const off = Math.max(3, size / 16);
+    text(s, cx + off, y, { size, family: F.pixel, color: C.down, align: "center", alpha });
+    text(s, cx - off, y, { size, family: F.pixel, color: C.up, align: "center", alpha });
+    text(s, cx, y, { size, family: F.pixel, color: C.text, align: "center", alpha });
+}
+
+function rowName(label) {
+    const name = label.replace(/\s*\(.*?\)$/, "");
+    return /^EPS/.test(name) ? "profit per share" : name.charAt(0).toLowerCase() + name.slice(1);
+}
+
+function fmt(v, label) {
+    if (label.includes("($bn)")) return "$" + v + "bn";
+    if (label.includes("($m)")) return "$" + v + "m";
+    if (label.includes("($)")) return "$" + v;
+    if (label.includes("(%)")) return v + "%";
+    return String(v);
+}
+
+// ---------- Background: night sky, city, scanlines ----------
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+
+function buildCity() {
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    const r = rng(11);
+    for (let i = 0; i < 150; i++) {
+        g.fillStyle = `rgba(255,255,255,${0.15 + r() * 0.5})`;
+        const s = r() < 0.12 ? 4 : 2;
+        g.fillRect(Math.floor(r() * W), Math.floor(r() * H * 0.75), s, s);
+    }
+    const rows = [
+        { col: "#1c2446", min: 330, max: 700, lit: 0.12, win: "rgba(245,196,81,0.35)" },
+        { col: "#0c101b", min: 170, max: 430, lit: 0.2, win: "rgba(245,196,81,0.8)" }
+    ];
+    for (const row of rows) {
+        let x = -30;
+        while (x < W) {
+            const w = 80 + Math.floor(r() * 120), h = row.min + Math.floor(r() * (row.max - row.min)), top = H - h;
+            g.fillStyle = row.col;
+            g.fillRect(x, top, w, h);
+            if (r() < 0.3) g.fillRect(x + w / 2 - 3, top - 60, 6, 60);
+            for (let wy = top + 26; wy < H - 20; wy += 36)
+                for (let wx = x + 16; wx < x + w - 18; wx += 28)
+                    if (r() < row.lit) { g.fillStyle = row.win; g.fillRect(wx, wy, 11, 15); }
+            x += w + Math.floor(r() * 16);
+        }
+    }
+    return c;
+}
+
+function buildScan() {
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.fillStyle = "rgba(0,0,0,0.16)";
+    for (let y = 0; y < H; y += 4) g.fillRect(0, y, W, 2);
+    return c;
+}
+
+function drawBg(t) {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#0a1224");
+    sky.addColorStop(0.55, "#142650");
+    sky.addColorStop(1, "#3a3070");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(W / 2, H, 60, W / 2, H, 1150);
+    glow.addColorStop(0, "rgba(225,110,215,0.32)");
+    glow.addColorStop(1, "rgba(225,110,215,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+    // Moon
+    ctx.fillStyle = "#EDE6C8";
+    ctx.beginPath();
+    ctx.arc(900, 360, 62, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(170,160,130,0.5)";
+    ctx.fillRect(875, 335, 16, 16); ctx.fillRect(915, 380, 22, 18); ctx.fillRect(890, 395, 10, 10);
+    // City drifts up a little over the reel
+    ctx.drawImage(city, 0, 40 - t * 2);
+    ctx.drawImage(scan, 0, 0);
+}
+
+// ---------- Chart ----------
+function niceStep(range) {
+    for (const s of [1, 2, 5, 10, 20, 25, 50, 100]) if (range / s <= 6) return s;
+    return 200;
+}
+
+function drawChart(box, cs, grow, widen, alpha, showLabel = true) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    panel(box.x, box.y, box.w, box.h);
+    const pre = cs.slice(0, -1), last = cs[cs.length - 1];
+    const base = pre[0][3], entry = pre[pre.length - 1][3];
+    let lo = Math.min(...pre.map(c => c[2])), hi = Math.max(...pre.map(c => c[1]));
+    // The scale only stretches to the last candle when it's revealed, so the empty space can't give it away
+    lo += (Math.min(lo, last[2]) - lo) * widen;
+    hi += (Math.max(hi, last[1]) - hi) * widen;
+    const pad = (hi - lo) * 0.08;
+    lo -= pad; hi += pad;
+    const px = box.x + 36, pw = box.w - 190, py = box.y + 40, ph = box.h - 80;
+    const Y = v => py + (hi - v) / (hi - lo) * ph;
+    const step = pw / cs.length, bw = step * 0.62;
+
+    // Gridlines in % since the first day shown
+    const pctLo = (lo / base - 1) * 100, pctHi = (hi / base - 1) * 100;
+    const s = niceStep(pctHi - pctLo);
+    for (let p = Math.ceil(pctLo / s) * s; p <= pctHi; p += s) {
+        const y = Y(base * (1 + p / 100));
+        ctx.fillStyle = "rgba(143,153,166,0.18)";
+        ctx.fillRect(px, y - 1, pw, 2);
+        text((p > 0 ? "+" : "") + p + "%", box.x + box.w - 30, y + 10, { size: 28, family: F.num, color: C.muted, align: "right" });
+    }
+
+    const candle = (i, [o, h, l, c], glow) => {
+        const x = px + i * step + step / 2, col = c >= o ? C.up : C.down;
+        ctx.save();
+        if (glow) { ctx.shadowColor = col; ctx.shadowBlur = 30; }
+        ctx.fillStyle = col;
+        ctx.fillRect(x - 2, Y(h), 4, Math.max(2, Y(l) - Y(h)));
+        ctx.fillRect(x - bw / 2, Math.min(Y(o), Y(c)), bw, Math.max(4, Math.abs(Y(o) - Y(c))));
+        ctx.restore();
+    };
+    pre.forEach((c, i) => candle(i, c));
+
+    // Gold dashed line where the trade starts
+    const ey = Y(entry);
+    ctx.save();
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 10]);
+    ctx.beginPath();
+    ctx.moveTo(px, ey);
+    ctx.lineTo(px + pw, ey);
+    ctx.stroke();
+    ctx.restore();
+    if (showLabel) {
+        const label = grow > 0 ? "ENTRY" : "YOU TRADE HERE";
+        ctx.font = font(26, F.num, 800);
+        const lw = ctx.measureText(label).width + 28, ly = ey - (Y(lo) - ey < 90 ? -24 : 64);
+        ctx.beginPath();
+        ctx.roundRect(px + 10, ly, lw, 42, 8);
+        ctx.fillStyle = "#12161D";
+        ctx.fill();
+        text(label, px + 24, ly + 30, { size: 26, family: F.num, weight: 800, color: C.gold });
+    }
+
+    // The reaction day grows out of the entry line
+    if (grow > 0) {
+        const g = v => entry + (v - entry) * grow;
+        candle(cs.length - 1, [g(last[0]), g(last[1]), g(last[2]), g(last[3])], true);
+    }
+    ctx.restore();
+}
+
+// ---------- Formats ----------
+// teaser: today's card, no answer. reveal: yesterday's card with the answer and why. full: both in one.
+const PLANS = {
+    teaser: { hook: [0, 3], card: [3, 10.6], chart: [10.6, 14.4], end: [14.4, 17.4], kicker: "> TODAY'S CARD", ask: "What did the stock do?", endKind: "comment" },
+    reveal: { hook: [0, 2.6], card: [2.6, 8.2], chart: [8.2, 9.6], reveal: [9.6, 13.6], why: [13.6, 18.4], end: [18.4, 20.4], kicker: "> YESTERDAY'S CARD", ask: "Did you call it?" },
+    full: { hook: [0, 3], card: [3, 10.6], chart: [10.6, 13.8], reveal: [13.8, 17.6], end: [17.6, 19.6], kicker: "> GUESS THE REACTION", ask: "What did the stock do?" }
+};
+
+// Lists use only cards that have been played (?played=N means the first N in puzzles.json)
+const LISTS = {
+    "beat-fell": {
+        title: n => [[[n + " times a company", C.text]], [["beat", C.up], [" expectations", C.text]], [["and the stock ", C.text], ["fell", C.down]]],
+        pick: cards => cards.filter(p => p.rows.every(r => r.actual > r.expected) && p.answer.movePct < 0)
+            .sort((a, b) => b.answer.movePct - a.answer.movePct).slice(-5)
+    },
+    "jumps": {
+        title: n => [[["The " + n + " biggest", C.text]], [["earnings-day ", C.text], ["jumps", C.up]], [["in the game", C.text]]],
+        pick: cards => cards.filter(p => p.answer.movePct > 0)
+            .sort((a, b) => a.answer.movePct - b.answer.movePct).slice(-5)
+    }
+};
+const ITEM = 3.8;   // seconds per list entry
+
+let MODE, PLAN, LIST, ITEMS, TOTAL;
+
+function setup(all) {
+    MODE = params.get("mode") || "teaser";
+    if (MODE === "list") {
+        const played = all.slice(0, Number(params.get("played") || all.length));
+        LIST = LISTS[params.get("list") || "beat-fell"];
+        ITEMS = LIST.pick(played);
+        TOTAL = 3 + ITEMS.length * ITEM + 2.4;
+    } else {
+        PLAN = PLANS[MODE];
+        P = all.find(p => p.id === Number(params.get("id") || 10));
+        TOTAL = PLAN.end[1];
+    }
+}
+
+function verdict(r) {
+    return r.actual > r.expected ? ["beat", C.up] : r.actual < r.expected ? ["missed", C.down] : ["matched", C.soft];
+}
+
+// "Beat on revenue and profit per share" / "Beat on revenue, missed on profit per share"
+function summary(p) {
+    const parts = p.rows.slice(0, 2).map(r => verdict(r)[0] + " on " + rowName(r.label));
+    const s = parts.length === 2 && parts[0].split(" on ")[0] === parts[1].split(" on ")[0]
+        ? parts[0] + " and " + rowName(p.rows[1].label)
+        : parts.join(", ");
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function moveText(m) { return (m >= 0 ? "+" : "−") + Math.abs(m).toFixed(1) + "%"; }
+
+function chip(label, cy, alpha) {
+    if (alpha <= 0) return;
+    ctx.font = font(34, F.num, 800);
+    const w = ctx.measureText(label).width + 60;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - w / 2, cy - 45, w, 66, 33);
+    ctx.fillStyle = "rgba(245,196,81,0.14)";
+    ctx.fill();
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+    text(label, W / 2, cy, { size: 34, family: F.num, weight: 800, color: C.gold, align: "center", alpha, spacing: 1 });
+}
+
+// ---------- Scenes ----------
+function sceneHook(t, [a, b], p, kicker, ask) {
+    const al = vis(t, a, b);
+    if (al <= 0) return;
+    text(kicker, W / 2, 700, { size: 36, family: F.num, weight: 800, color: C.gold, align: "center", alpha: al, spacing: 4 });
+    const rows = p.rows.slice(0, 2);
+    rows.forEach((r, i) => {
+        const [word, col] = verdict(r), k = al * prog(t, a + 0.35 + i * 0.45, 0.4);
+        pieces([["It ", C.text], [word, col], [" on " + rowName(r.label) + ".", C.text]], W / 2, 860 + i * 110 - (1 - k) * 30, 64, k);
+    });
+    const q = al * prog(t, a + 1.45, 0.4);
+    text(ask, W / 2, 860 + rows.length * 110 + 70 - (1 - q) * 30, { size: 74, color: C.gold, align: "center", alpha: q });
+}
+
+function sceneCard(t, [a, b], p) {
+    const al = vis(t, a, b);
+    if (al <= 0) return;
+    text("> RESULTS · " + p.when.toUpperCase(), 90, 450, { size: 32, family: F.num, weight: 800, color: C.gold, alpha: al, spacing: 2 });
+    const head = wrap(p.disguise.toUpperCase(), 900, 54, F.num, 800);
+    head.forEach((l, i) => text(l, 90, 530 + i * 68, { size: 54, family: F.num, weight: 800, alpha: al }));
+    // Blinking cursor after the headline
+    if (Math.floor(t * 2) % 2 === 0) {
+        ctx.font = font(54, F.num, 800);
+        const lastW = ctx.measureText(head[head.length - 1]).width;
+        text("_", 90 + lastW + 10, 530 + (head.length - 1) * 68, { size: 54, family: F.num, weight: 800, color: C.gold, alpha: al });
+    }
+
+    let y = 530 + head.length * 68 + 30;
+    const ta = al * prog(t, a + 0.4, 0.4), tableH = 90 + p.rows.length * 96;
+    panel(70, y, 940, tableH, ta);
+    text("EXPECTED", 640, y + 62, { size: 26, family: F.num, weight: 800, color: C.muted, align: "right", alpha: ta, spacing: 2 });
+    text("ACTUAL", 950, y + 62, { size: 26, family: F.num, weight: 800, color: C.muted, align: "right", alpha: ta, spacing: 2 });
+    p.rows.forEach((r, i) => {
+        const ra = al * prog(t, a + 0.6 + i * 0.35, 0.35), ry = y + 150 + i * 96;
+        text(r.label.replace(/\s*\(.*?\)$/, ""), 110, ry, { size: 40, weight: 500, color: C.soft, alpha: ra });
+        text(fmt(r.expected, r.label), 640, ry, { size: 40, family: F.num, weight: 700, color: C.soft, align: "right", alpha: ra });
+        text(fmt(r.actual, r.label), 950, ry, { size: 40, family: F.num, weight: 800, color: verdict(r)[1], align: "right", alpha: ra });
+    });
+
+    y += tableH + 30;
+    const na = al * prog(t, a + 1.9, 0.5), lines = wrap(p.otherNews, 860, 40);
+    panel(70, y, 940, 110 + lines.length * 54, na);
+    text("ALSO ANNOUNCED", 110, y + 62, { size: 26, family: F.num, weight: 800, color: C.gold, alpha: na, spacing: 2 });
+    lines.forEach((l, i) => text(l, 110, y + 124 + i * 54, { size: 40, weight: 500, color: C.text, alpha: na }));
+}
+
+function sceneQuestion(t, [a, b]) {
+    const al = vis(t, a, b);
+    if (al <= 0) return;
+    text("BUY, SHORT", W / 2, 500, { size: 68, family: F.num, weight: 800, align: "center", alpha: al });
+    text("OR STAY OUT?", W / 2, 590, { size: 68, family: F.num, weight: 800, color: C.gold, align: "center", alpha: al });
+    if (b - a < 3) return;   // no room for a countdown
+    const k = (t - a - 0.5) / 0.85, left = 3 - Math.floor(k);
+    if (left >= 1 && left <= 3)
+        text(String(left), W / 2, 1480, { size: 150 + (1 - ease((k % 1) * 3)) * 40, family: F.pixel, color: C.gold, align: "center", alpha: al * (1 - (k % 1) * 0.5) });
+    text("PAUSE TO DECIDE", W / 2, 1560, { size: 30, family: F.num, weight: 800, color: C.muted, align: "center", alpha: al, spacing: 4 });
+}
+
+function sceneReveal(t, [a, b], p) {
+    const al = vis(t, a, b);
+    if (al <= 0) return;
+    const move = p.answer.movePct;
+    text(moveText(move * prog(t, a + 0.4, 1.0)), W / 2, 600, { size: 170, color: move >= 0 ? C.up : C.down, align: "center", alpha: al * prog(t, a + 0.3, 0.3) });
+    const na = al * prog(t, a + 1.4, 0.4);
+    text(p.company, W / 2, 1420, { size: 88, align: "center", alpha: na });
+    text(p.when, W / 2, 1480, { size: 38, weight: 500, color: C.muted, align: "center", alpha: na });
+    chip(p.tag.toUpperCase(), 1560, al * prog(t, a + 1.9, 0.4));
+}
+
+function sceneWhy(t, [a, b], p) {
+    const al = vis(t, a, b);
+    if (al <= 0) return;
+    const move = p.answer.movePct;
+    text("> " + p.company.toUpperCase() + " · " + p.when.toUpperCase(), 90, 450, { size: 32, family: F.num, weight: 800, color: C.gold, alpha: al, spacing: 2 });
+    text(moveText(move), 90, 590, { size: 130, color: move >= 0 ? C.up : C.down, alpha: al });
+    const lines = wrap(p.why, 860, 44), pa = al * prog(t, a + 0.4, 0.4);
+    panel(70, 660, 940, 120 + lines.length * 60, pa);
+    text("WHY IT MOVED", 110, 722, { size: 26, family: F.num, weight: 800, color: C.gold, alpha: pa, spacing: 2 });
+    lines.forEach((l, i) => text(l, 110, 790 + i * 60, { size: 44, weight: 500, alpha: pa }));
+    chip(p.tag.toUpperCase(), 660 + 120 + lines.length * 60 + 90, al * prog(t, a + 1.2, 0.4));
+}
+
+function sceneEnd(t, a, kind) {
+    const al = vis(t, a, TOTAL + 1);
+    if (al <= 0) return;
+    if (kind === "comment") {
+        pixelTitle("PRICED IN", W / 2, 780, 110, al);
+        text("Comment BUY or SHORT", W / 2, 940, { size: 70, color: C.gold, align: "center", alpha: al * prog(t, a + 0.2, 0.4) });
+        text("Find out in today's game", W / 2, 1030, { size: 48, weight: 500, color: C.soft, align: "center", alpha: al * prog(t, a + 0.5, 0.4) });
+        text("Free · link in bio", W / 2, 1160, { size: 52, color: C.text, align: "center", alpha: al * prog(t, a + 0.8, 0.4) });
+        return;
+    }
+    pixelTitle("PRICED IN", W / 2, 880, 138, al);
+    text("Real company results. Name hidden.", W / 2, 990, { size: 46, weight: 500, color: C.soft, align: "center", alpha: al });
+    text("3 new cards every weekday", W / 2, 1060, { size: 46, weight: 500, color: C.soft, align: "center", alpha: al });
+    text("Play free · link in bio", W / 2, 1200, { size: 56, color: C.gold, align: "center", alpha: al * prog(t, a + 0.5, 0.4) });
+}
+
+// ---------- The frame at time t ----------
+function draw(t) {
+    drawBg(t);
+    if (MODE === "list") return drawList(t);
+    const S = PLAN, endAt = S.end[0];
+    pixelTitle("PRICED IN", W / 2, 290, 64, 1 - vis(t, endAt, TOTAL + 1));
+    sceneHook(t, S.hook, P, S.kicker, S.ask);
+    sceneCard(t, S.card, P);
+    const chartEnd = S.reveal ? S.reveal[1] : S.chart[1];
+    drawChart({ x: 70, y: 680, w: 940, h: 640 }, P.candles.slice(-31),
+        S.reveal ? prog(t, S.reveal[0] + 0.3, 0.8) : 0, S.reveal ? prog(t, S.reveal[0], 0.6) : 0, vis(t, S.chart[0], chartEnd), true);
+    sceneQuestion(t, S.chart);
+    if (S.reveal) sceneReveal(t, S.reveal, P);
+    if (S.why) sceneWhy(t, S.why, P);
+    sceneEnd(t, endAt, S.endKind);
+}
+
+function drawList(t) {
+    const endAt = 3 + ITEMS.length * ITEM;
+    pixelTitle("PRICED IN", W / 2, 290, 64, 1 - vis(t, endAt, TOTAL + 1));
+
+    // Title
+    const ta = vis(t, 0, 3);
+    if (ta > 0) {
+        text("> TOP " + ITEMS.length, W / 2, 720, { size: 36, family: F.num, weight: 800, color: C.gold, align: "center", alpha: ta, spacing: 4 });
+        LIST.title(ITEMS.length).forEach((line, i) => {
+            const k = ta * prog(t, 0.3 + i * 0.35, 0.4);
+            pieces(line, W / 2, 870 + i * 100 - (1 - k) * 30, 76, k);
+        });
+    }
+
+    // Counts down from #N to #1
+    ITEMS.forEach((p, i) => {
+        const a = 3 + i * ITEM, al = vis(t, a, a + ITEM);
+        if (al <= 0) return;
+        text("#" + (ITEMS.length - i), W / 2, 480, { size: 100, family: F.num, weight: 800, color: C.gold, align: "center", alpha: al });
+        const head = wrap(p.disguise.toUpperCase(), 920, 40, F.num, 800);
+        head.forEach((l, j) => text(l, W / 2, 560 + j * 52, { size: 40, family: F.num, weight: 800, align: "center", alpha: al }));
+        text(summary(p), W / 2, 560 + head.length * 52 + 20, { size: 38, weight: 500, color: C.soft, align: "center", alpha: al });
+        drawChart({ x: 70, y: 720, w: 940, h: 500 }, p.candles.slice(-31), prog(t, a + 1.0, 0.7), prog(t, a + 0.8, 0.5), al, false);
+        const move = p.answer.movePct, ma = al * prog(t, a + 1.1, 0.3);
+        text(moveText(move * prog(t, a + 1.1, 0.8)), W / 2, 1360, { size: 120, color: move >= 0 ? C.up : C.down, align: "center", alpha: ma });
+        const na = al * prog(t, a + 1.9, 0.4);
+        text(p.company + " · " + p.when, W / 2, 1440, { size: 46, weight: 700, align: "center", alpha: na });
+    });
+
+    sceneEnd(t, endAt, "play");
+}
+
+// ---------- Recording ----------
+window.record = async () => {
+    const canvas = document.getElementById("c");
+    const types = ["video/mp4;codecs=avc1.640028", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9"];
+    const type = types.find(x => MediaRecorder.isTypeSupported(x));
+    const rec = new MediaRecorder(canvas.captureStream(30), { mimeType: type, videoBitsPerSecond: 10e6 });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(r => { rec.onstop = r; });
+    rec.start();
+    const t0 = performance.now();
+    await new Promise(done => {
+        const frame = () => {
+            const t = (performance.now() - t0) / 1000;
+            draw(Math.min(t, TOTAL));
+            if (t < TOTAL + 0.2) requestAnimationFrame(frame); else done();
+        };
+        requestAnimationFrame(frame);
+    });
+    rec.stop();
+    await stopped;
+    const buf = new Uint8Array(await new Blob(chunks).arrayBuffer());
+    let s = "";
+    for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    return { type, data: btoa(s) };
+};
+
+(async () => {
+    const all = await (await fetch("../../puzzles.json")).json();
+    setup(all);
+    await Promise.all([font(40), font(40, F.font, 500), font(40, F.num, 800), font(40, F.num, 700), font(40, F.pixel, 400), font(40, F.pixel, 700)]
+        .map(f => document.fonts.load(f)));
+    city = buildCity();
+    scan = buildScan();
+    window.ready = true;
+    if (params.has("t")) draw(Number(params.get("t")));
+    else if (!params.has("rec")) {
+        // Open the page normally to watch it loop
+        const t0 = performance.now();
+        const loop = () => { draw(((performance.now() - t0) / 1000) % TOTAL); requestAnimationFrame(loop); };
+        loop();
+    }
+})();
+</script>
+</body>
+</html>
