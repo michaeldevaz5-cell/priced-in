@@ -13,7 +13,7 @@ A Wordle-style web game about how markets react to company results. Each card is
 
 The lesson running through the game: **prices move on surprise versus expectations, not on whether the news sounds good.**
 
-Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys from `main`).
+Live at https://pricedin.day (GitHub Pages, deploys from `main`; custom domain bought through Wix on 1 Nov 2026, DNS at Wix pointing to GitHub; the old github.io address redirects). The `CNAME` file holds the domain: don't delete it.
 
 ## Who does what
 
@@ -40,7 +40,7 @@ Live at https://michaeldevaz5-cell.github.io/priced-in (GitHub Pages, deploys fr
 | `puzzles.json` | The cards. **Michael's file.** |
 | `README.md` | Public description, credits, card format, how to run locally |
 | `tools/reels/` | **The reel maker** (built 24 Oct 2026 at Michael's request; not part of the site, which never links to it). `reel.html` draws a 1080×1920 Instagram reel from `puzzles.json` on a canvas: `mode=teaser` (today's card, no answer, "Comment BUY or SHORT"), `mode=reveal` (yesterday's card with the move, `why` and `tag`), `mode=list` (`list=beat-fell` or `jumps`, a top 5 from the first `played` cards). `make-reel.mjs` serves the project, records it with headless Chrome (MediaRecorder, MP4) and saves to `tools/reels/out/` (git-ignored). Node built-ins only, no npm packages. Reels never show a card's answer before it has been played. Michael wants reels fully digital: nothing filmed. |
-| `og-image.jpg`, `favicon.svg`, `apple-touch-icon.png` | Link-preview image (1200×630, a screenshot of the home screen without the button) and the tab/home-screen icon (a green and a red candle). The `og:` tags in `index.html` point at the live URL, so they need updating if the site moves to a custom domain. |
+| `og-image.jpg`, `favicon.svg`, `apple-touch-icon.png` | Link-preview image (1200×630, a screenshot of the home screen without the button) and the tab/home-screen icon (a green and a red candle). The `og:` tags in `index.html` point at https://pricedin.day. |
 | `notes/card-research.md` | **The card research:** which companies are next, the verified figures and sources for each, and how to find the data. Check Michael's cards against it. Not loaded by the site. |
 
 ### game.js map

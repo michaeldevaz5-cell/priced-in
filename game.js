@@ -8,7 +8,7 @@
 // ---------- Settings ----------
 const START_VALUE = 10000;       // every week (and every practice round) starts with $10,000
 const STAKES = { low: 0.10, mid: 0.25, high: 0.50 };   // share of the portfolio you put on a trade
-const SITE_URL = "michaeldevaz5-cell.github.io/priced-in";
+const SITE_URL = "pricedin.day";
 const DAILY_START = "2026-10-26";  // the Monday the first daily cards go live
 const CARDS_PER_DAY = 3;           // daily cards come from puzzles.json in order, 3 per weekday
 

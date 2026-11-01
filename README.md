@@ -6,7 +6,7 @@ The lesson running through it: prices move on **surprise versus expectations**, 
 
 **Three new cards every weekday.** Your portfolio carries over from day to day and resets to $10,000 every Monday. Your balance decides your level of the tower, from the Lobby at $10,000 to the Rooftop at $25,000, and the higher levels get more luxurious. The Week tab shows each day's result, a graph of your portfolio and your stats. Practice plays every card in one go.
 
-**Play:** https://michaeldevaz5-cell.github.io/priced-in
+**Play:** https://pricedin.day
 
 ## Who made what
 
