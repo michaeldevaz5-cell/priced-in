@@ -19,7 +19,7 @@ Live at https://pricedin.day (GitHub Pages, deploys from `main`; custom domain b
 
 - **Michael (the owner)** writes every scenario in `puzzles.json` and makes the product decisions. He's learning to code and finance, so explain jargon and keep explanations short and plain.
 - **Claude writes the code.** Michael hand-wrote the first version; the README and the header comment in `game.js` say this, and they must stay accurate.
-- **Never write or rewrite scenario text** (`disguise`, `mood`, `otherNews`, `why`, `tag`) unless Michael explicitly asks for that one card. **Exception (21 Oct 2026):** Michael asked Claude to draft cards 19–30 (week 2, Tue 3 – Fri 6 Nov) in full; drafts and review notes are in `notes/week2-drafts.md`, and Michael edits and approves them. You may check his numbers, fix JSON syntax and point out problems.
+- **Never write or rewrite scenario text** (`disguise`, `mood`, `otherNews`, `why`, `tag`) unless Michael explicitly asks for that one card. **Exception (21 Oct 2026):** Michael asked Claude to draft cards 19–30 (week 2, Tue 3 – Fri 6 Nov) in full; drafts and review notes are in `notes/week2-drafts.md`, and Michael edits and approves them. **Exception (6 Nov 2026):** Michael asked Claude to research and add cards 31–45 (week 3, Mon 9 – Fri 13 Nov) directly, with no draft stage; notes are in `notes/week3-cards.md`. You may check his numbers, fix JSON syntax and point out problems.
 - **Every figure must be real and sourced.** Don't invent or "round to look nice". If a number can't be verified, say so.
 - **Be honest**, including when the answer is "this doesn't need doing".
 
@@ -116,7 +116,7 @@ Before saying a change works:
 
 ## Current state (19 Oct 2026)
 
-- **Cards:** 30, so weeks 1 and 2 (26 Oct – 6 Nov) are full, in `puzzles.json`:
+- **Cards:** 45, so weeks 1–3 (26 Oct – 13 Nov) are full, in `puzzles.json`:
   - Meta, Feb 2023: has `candles`
   - Netflix, Apr 2024: has `candles`; its text fields were drafted by Claude; Michael has decided to keep them (18 Oct 2026)
   - Nike, Jun 2025: has `candles`
@@ -136,6 +136,7 @@ Before saying a change works:
   - e.l.f. Beauty, Feb 2025: has `candles`; Mon 2 Nov; sales beat, guidance cut, opened −25.1%, closed −19.6%; `otherNews` drafted by Claude; mood changed from "cautiously optimistic" (the stock had fallen 37% in seven weeks) and the tariff line softened (management said tariffs wouldn't hit this year) at Michael's request
   - Carvana, Feb 2025: has `candles` (×5 for the May 2026 split); Mon 2 Nov; beat on both, opened −6.0%, closed −12.1%; `otherNews` drafted by Claude; "reconditioning costs" in `why` replaced with "shrinking wholesale volumes" (Bloomberg's reason) at Michael's request
   - Cards 19–30, drafted by Claude at Michael's request (see `notes/week2-drafts.md`): Lyft Feb 2024, Chipotle Oct 2025, Capital One Jul 2025 (Tue 3 Nov); Gap Nov 2024, Ford Jul 2024, Monster Beverage May 2025 (Wed 4 Nov); Deckers Jan 2025, Mattel Jul 2025, Rivian May 2024 (Thu 5 Nov); Lululemon Dec 2024, Costco Mar 2025, Align Technology Jul 2025 (Fri 6 Nov). All have 60 candles (Monster ×2 for its Aug 2026 split).
+  - Cards 31–45, researched and written by Claude at Michael's request on 6 Nov 2026 (see `notes/week3-cards.md`): FedEx Dec 2024, Ulta Mar 2025, Block Feb 2025 (Mon 9 Nov); RH Jun 2025, Southwest Jul 2025, Duolingo Nov 2024 (Tue 10 Nov); Starbucks Jul 2025, Molina Jul 2025, DraftKings Feb 2025 (Wed 11 Nov); KB Home Mar 2025, Expedia Feb 2025, Mondelez Feb 2025 (Thu 12 Nov); Zoom Feb 2025, Occidental Feb 2025, Columbia Sportswear Feb 2025 (Fri 13 Nov). All have 60 candles (FedEx ×1.241 to undo Yahoo's adjustment for the June 2026 FedEx Freight spin-off). Week 4 (16–20 Nov) has no cards yet.
 - **Every card has 60 `candles` with volume** (fetched from Yahoo on 18 Oct 2026; the last 10 closes match the earlier `prices`). Netflix split 10-for-1 in Nov 2025, so Yahoo now shows its 2024 prices divided by 10; the card uses the real prices of the time (×10).
 - **Launch week (26–30 Oct) is full: 15 cards.** Next: 15 for week 2 (2–6 Nov). Michael planned 4 cards on 19 Oct (Tesla, Netflix, Meta done; 1 more for week 2). Tesla Apr 2024 was dropped: its open and close were almost the same. Pick days where the open and close differ a lot.
 - **Open vs close matters now:** the best cards are ones where the open and close differ a lot (Alphabet opened +6.5% and closed +2.8%), so "always hold" or "always exit at the open" can't win. The Week tab compares the player with "always hold to the close".
